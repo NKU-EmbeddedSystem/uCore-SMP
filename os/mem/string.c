@@ -69,6 +69,11 @@ strncpy(char *s, const char *t, int n) {
     return os;
 }
 
+char *
+strcpy(char *s, const char *t) {
+    while ((*s++ = *t++) != 0);
+}
+
 // Like strncpy but guaranteed to NUL-terminate.
 char *
 safestrcpy(char *s, const char *t, int n) {

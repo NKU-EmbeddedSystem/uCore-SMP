@@ -40,6 +40,7 @@ char *safestrcpy(char *, const char *, int);
 int strlen(const char *);
 int strncmp(const char *, const char *, uint);
 char *strncpy(char *, const char *, int);
+char *strcpy(char *, const char *);
 char *strchr(const char *, int);
 
 // syscall.c
