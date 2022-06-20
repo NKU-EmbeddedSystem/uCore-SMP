@@ -659,8 +659,6 @@ dirlookup(struct inode *dp, char *name) {
         if (f_read(&inode_ptr->file, &devinfo, sizeof(devinfo), &br) == FR_OK &&
             br == sizeof(devinfo) &&
             devinfo.magic == DEVICE_MAGIC) {
-            // no need to maintain the file open because it is a device
-            f_close(&inode_ptr->file);
             inode_ptr->dev = ROOTDEV;
             inode_ptr->ref = 1;
             inode_ptr->type = T_DEVICE;
