@@ -110,3 +110,10 @@ char *strchr(const char *str, int c) {
             return (char *) str;
     return 0;
 }
+
+char* strcat(char *s, const char *t) {
+    char *os = s;
+    while (*s) s++;
+    while ((*s++ = *t++) != 0);
+    return os;
+}

@@ -102,7 +102,8 @@ int make_shell_proc()
     safestrcpy(p->name, "shell", PROC_NAME_MAX);
 
     // cwd
-    p->cwd = inode_by_name("/");
+//    p->cwd = inode_by_name("/");
+    p->cwd = NULL;
     p->state = RUNNABLE;
     release(&p->lock);
 

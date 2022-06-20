@@ -5,7 +5,7 @@
 
 
 #include "ff.h"
-
+#include <lock/lock.h>	// O/S definitions
 
 #if FF_USE_LFN == 3	/* Dynamic memory allocation */
 
@@ -48,15 +48,47 @@ void ff_memfree (
 
 //const osMutexDef_t Mutex[FF_VOLUMES];	/* Table of CMSIS-RTOS mutex */
 
+//static struct spinlock lock[FF_VOLUMES];
+#define FF_MAX_POOL 10
+static struct mutex lock_pool[FF_MAX_POOL];
+static bool lock_init[FF_MAX_POOL];
+static struct mutex m;
+static bool m_init;
 
 int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object */
 	BYTE vol,			/* Corresponding volume (logical drive number) */
 	FF_SYNC_t* sobj		/* Pointer to return the created sync object */
 )
 {
+    printf("ff_cre_syncobj\n");
+    /* Spinlock */
+//    if (!lock_init[vol]) {
+//        init_spin_lock_with_name(&lock[vol], "fatfs");
+//        lock_init[vol] = true;
+//    }
+//    *sobj = &lock[vol];
+//    return 1;
+
+    /* mutex */
+//    for (int i = 0; i < FF_MAX_POOL; i++) {
+//        if (!lock_init[i]) {
+//            init_mutex(&lock_pool[i]);
+//            lock_init[i] = true;
+//            *sobj = &lock_pool[i];
+//            return 1;
+//        }
+//    }
+//    return 0;
+    if (!m_init) {
+        init_mutex(&m);
+        m_init = true;
+    }
+    *sobj = &m;
+    return 1;
+
 	/* Win32 */
-	*sobj = CreateMutex(NULL, FALSE, NULL);
-	return (int)(*sobj != INVALID_HANDLE_VALUE);
+//	*sobj = CreateMutex(NULL, FALSE, NULL);
+//	return (int)(*sobj != INVALID_HANDLE_VALUE);
 
 	/* uITRON */
 //	T_CSEM csem = {TA_TPRI,1,1};
@@ -90,8 +122,27 @@ int ff_del_syncobj (	/* 1:Function succeeded, 0:Could not delete due to an error
 	FF_SYNC_t sobj		/* Sync object tied to the logical drive to be deleted */
 )
 {
+    /* Spinlock */
+    // do nothing
+    return 1;
+
+    /* mutex */
+//    for (int i = 0; i < FF_MAX_POOL; i++) {
+//        if (&lock_pool[i] == sobj) {
+//            lock_init[i] = false;
+//            return 1;
+//        }
+//    }
+//    return 0;
+//    printf("ff_del_syncobj\n");
+//    if (m_init && &m == sobj) {
+//        m_init = false;
+//        return 1;
+//    }
+//    return 0;
+
 	/* Win32 */
-	return (int)CloseHandle(sobj);
+//	return (int)CloseHandle(sobj);
 
 	/* uITRON */
 //	return (int)(del_sem(sobj) == E_OK);
@@ -121,8 +172,16 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 	FF_SYNC_t sobj	/* Sync object to wait */
 )
 {
+    /* Spinlock */
+//    acquire(sobj);
+//    return 1;
+
+    /* mutex */
+    acquire_mutex_sleep(sobj);
+    return 1;
+
 	/* Win32 */
-	return (int)(WaitForSingleObject(sobj, FF_FS_TIMEOUT) == WAIT_OBJECT_0);
+//	return (int)(WaitForSingleObject(sobj, FF_FS_TIMEOUT) == WAIT_OBJECT_0);
 
 	/* uITRON */
 //	return (int)(wai_sem(sobj) == E_OK);
@@ -150,8 +209,14 @@ void ff_rel_grant (
 	FF_SYNC_t sobj	/* Sync object to be signaled */
 )
 {
+    /* Spinlock */
+//    release(sobj);
+
+    /* mutex */
+    release_mutex_sleep(sobj);
+
 	/* Win32 */
-	ReleaseMutex(sobj);
+//	ReleaseMutex(sobj);
 
 	/* uITRON */
 //	sig_sem(sobj);

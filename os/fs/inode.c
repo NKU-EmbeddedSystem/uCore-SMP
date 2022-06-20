@@ -3,32 +3,33 @@
 #include <fs/buf.h>
 #include <proc/proc.h>
 
- struct
-{
-    struct spinlock lock;
+struct {
+    struct mutex lock;
     struct inode inode[NINODE];
 } itable;
 
-static uint
-bmap(struct inode *ip, uint bn);
+//static uint
+//bmap(struct inode *ip, uint bn);
+static
+void print_inode(struct inode *ip);
 static struct inode *
 inode_or_parent_by_name(char *path, int nameiparent, char *name);
 
 // Free a disk block.
-static void free_disk_block(int dev, uint block_id) {
-    struct buf *bitmap_block;
-    int bit_offset; // in bitmap block
-    int mask;
-
-    bitmap_block = acquire_buf_and_read(dev, BITMAP_BLOCK_CONTAINING(block_id, sb));
-    bit_offset = block_id % BITS_PER_BITMAP_BLOCK;
-    mask = 1 << (bit_offset % 8);
-    if ((bitmap_block->data[bit_offset / 8] & mask) == 0)
-        panic("freeing free block");
-    bitmap_block->data[bit_offset / 8] &= ~mask;
-    write_buf_to_disk(bitmap_block);
-    release_buf(bitmap_block);
-}
+//static void free_disk_block(int dev, uint block_id) {
+//    struct buf *bitmap_block;
+//    int bit_offset; // in bitmap block
+//    int mask;
+//
+//    bitmap_block = acquire_buf_and_read(dev, BITMAP_BLOCK_CONTAINING(block_id, sb));
+//    bit_offset = block_id % BITS_PER_BITMAP_BLOCK;
+//    mask = 1 << (bit_offset % 8);
+//    if ((bitmap_block->data[bit_offset / 8] & mask) == 0)
+//        panic("freeing free block");
+//    bitmap_block->data[bit_offset / 8] &= ~mask;
+//    write_buf_to_disk(bitmap_block);
+//    release_buf(bitmap_block);
+//}
 
 // Copy the next path element from path into name.
 // Return a pointer to the element following the copied one.
@@ -67,77 +68,78 @@ skipelem(char *path, char *name) {
 }
 
 // Zero a block.
-static void
-set_block_to_zero(int dev, int bno) {
-    struct buf *bp;
-    bp = acquire_buf_and_read(dev, bno);
-    memset(bp->data, 0, BSIZE);
-    write_buf_to_disk(bp);
-    release_buf(bp);
-}
+//static void
+//set_block_to_zero(int dev, int bno) {
+//    struct buf *bp;
+//    bp = acquire_buf_and_read(dev, bno);
+//    memset(bp->data, 0, BSIZE);
+//    write_buf_to_disk(bp);
+//    release_buf(bp);
+//}
 
 // Blocks.
 
 // Allocate a zeroed disk block.
-static uint
-alloc_zeroed_block(uint dev) {
-    int base_block_id;
-    int local_block_id;
-    int bit_mask;
-    struct buf *bitmap_block;
-
-    bitmap_block = NULL;
-    for (base_block_id = 0; base_block_id < sb.total_blocks; base_block_id += BITS_PER_BITMAP_BLOCK) {
-        // the corresponding bitmap block
-        bitmap_block = acquire_buf_and_read(dev, BITMAP_BLOCK_CONTAINING(base_block_id, sb));
-
-        // iterate all bits in this bitmap block
-        for (local_block_id = 0; local_block_id < BITS_PER_BITMAP_BLOCK && base_block_id + local_block_id < sb.total_blocks; local_block_id++) {
-            bit_mask = 1 << (local_block_id % 8);
-            if ((bitmap_block->data[local_block_id / 8] & bit_mask) == 0) {
-                // the block free
-                bitmap_block->data[local_block_id / 8] |= bit_mask; // Mark block in use.
-                write_buf_to_disk(bitmap_block);
-                release_buf(bitmap_block);
-                set_block_to_zero(dev, base_block_id + local_block_id);
-                return base_block_id + local_block_id;
-            }
-        }
-        release_buf(bitmap_block);
-    }
-    panic("alloc_zeroed_block: out of blocks");
-    return 0;
-}
+//static uint
+//alloc_zeroed_block(uint dev) {
+//    int base_block_id;
+//    int local_block_id;
+//    int bit_mask;
+//    struct buf *bitmap_block;
+//
+//    bitmap_block = NULL;
+//    for (base_block_id = 0; base_block_id < sb.total_blocks; base_block_id += BITS_PER_BITMAP_BLOCK) {
+//        // the corresponding bitmap block
+//        bitmap_block = acquire_buf_and_read(dev, BITMAP_BLOCK_CONTAINING(base_block_id, sb));
+//
+//        // iterate all bits in this bitmap block
+//        for (local_block_id = 0; local_block_id < BITS_PER_BITMAP_BLOCK && base_block_id + local_block_id < sb.total_blocks; local_block_id++) {
+//            bit_mask = 1 << (local_block_id % 8);
+//            if ((bitmap_block->data[local_block_id / 8] & bit_mask) == 0) {
+//                // the block free
+//                bitmap_block->data[local_block_id / 8] |= bit_mask; // Mark block in use.
+//                write_buf_to_disk(bitmap_block);
+//                release_buf(bitmap_block);
+//                set_block_to_zero(dev, base_block_id + local_block_id);
+//                return base_block_id + local_block_id;
+//            }
+//        }
+//        release_buf(bitmap_block);
+//    }
+//    panic("alloc_zeroed_block: out of blocks");
+//    return 0;
+//}
 
 
 // Allocate an inode on device dev.
 // Mark it as allocated by  giving it type `type`.
 // Returns an allocated and referenced inode.
-struct inode *
-alloc_disk_inode(uint dev, short type) {
-    int inum;
-    struct buf *bp;
-    struct dinode *disk_inode;
-
-    for (inum = 1; inum < sb.ninodes; inum++) {
-        bp = acquire_buf_and_read(dev, BLOCK_CONTAINING_INODE(inum, sb));
-        disk_inode = (struct dinode *)bp->data + inum % INODES_PER_BLOCK;
-        if (disk_inode->type == 0) {
-            // a free inode
-            memset(disk_inode, 0, sizeof(*disk_inode));
-            disk_inode->type = type;
-            write_buf_to_disk(bp);
-            release_buf(bp);
-            return iget(dev, inum);
-        }
-        release_buf(bp);
-    }
-    panic("ialloc: no inodes");
-    return 0;
-}
+//struct inode *
+//alloc_disk_inode(uint dev, short type) {
+//    int inum;
+//    struct buf *bp;
+//    struct dinode *disk_inode;
+//
+//    for (inum = 1; inum < sb.ninodes; inum++) {
+//        bp = acquire_buf_and_read(dev, BLOCK_CONTAINING_INODE(inum, sb));
+//        disk_inode = (struct dinode *)bp->data + inum % INODES_PER_BLOCK;
+//        if (disk_inode->type == 0) {
+//            // a free inode
+//            memset(disk_inode, 0, sizeof(*disk_inode));
+//            disk_inode->type = type;
+//            write_buf_to_disk(bp);
+//            release_buf(bp);
+//            return iget(dev, inum);
+//        }
+//        release_buf(bp);
+//    }
+//    panic("ialloc: no inodes");
+//    return 0;
+//}
 
 void inode_table_init() {
-    init_spin_lock_with_name(&itable.lock, "itable");
+//    init_spin_lock_with_name(&itable.lock, "itable");
+    init_mutex(&itable.lock);
     for (int i = 0; i < NINODE; i++) {
         init_mutex(&itable.inode[i].lock);
     }
@@ -146,41 +148,75 @@ void inode_table_init() {
 // Copy a modified in-memory inode to disk.
 // Must be called after every change to an ip->xxx field
 // that lives on disk.
-void iupdate(struct inode *ip) {
-    struct buf *bp;
-    struct dinode *dip;
-
-    bp = acquire_buf_and_read(ip->dev, BLOCK_CONTAINING_INODE(ip->inum, sb));
-    dip = (struct dinode *)bp->data + ip->inum % INODES_PER_BLOCK;
-    dip->type = ip->type;
-    dip->major = ip->major;
-    dip->minor = ip->minor;
-    dip->num_link = ip->num_link;
-    dip->size = ip->size;
-    memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-    write_buf_to_disk(bp);
-    release_buf(bp);
-}
+//void iupdate(struct inode *ip) {
+//    struct buf *bp;
+//    struct dinode *dip;
+//
+//    bp = acquire_buf_and_read(ip->dev, BLOCK_CONTAINING_INODE(ip->inum, sb));
+//    dip = (struct dinode *)bp->data + ip->inum % INODES_PER_BLOCK;
+//    dip->type = ip->type;
+//    dip->major = ip->major;
+//    dip->minor = ip->minor;
+//    dip->num_link = ip->num_link;
+//    dip->size = ip->size;
+//    memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+//    write_buf_to_disk(bp);
+//    release_buf(bp);
+//}
 
 // Find the inode with number inum on device dev
 // and return the in-memory copy. Does not read
 // it from disk.
-struct inode *
-iget(uint dev, uint inum) {
-    debugcore("iget");
+//struct inode *
+//iget(uint dev, uint inum) {
+//    debugcore("iget");
+//
+//    struct inode *inode_ptr, *empty;
+//    acquire(&itable.lock);
+//    // Is the inode already in the table?
+//    empty = NULL;
+//    for (inode_ptr = &itable.inode[0]; inode_ptr < &itable.inode[NINODE]; inode_ptr++) {
+//        if (inode_ptr->ref > 0 && inode_ptr->dev == dev && inode_ptr->inum == inum) {
+//            inode_ptr->ref++;
+//            release(&itable.lock);
+//            return inode_ptr;
+//        }
+//        if (empty == 0 && inode_ptr->ref == 0) // Remember empty slot.
+//            empty = inode_ptr;
+//    }
+//
+//    // Recycle an inode entry.
+//    if (empty == NULL)
+//        panic("iget: no inodes");
+//
+//    inode_ptr = empty;
+//    inode_ptr->dev = dev;
+//    inode_ptr->inum = inum;
+//    inode_ptr->ref = 1;
+//    inode_ptr->valid = 0;
+//    release(&itable.lock);
+//    return inode_ptr;
+//}
+
+struct inode *iget_root() {
+    debugcore("iget_root");
 
     struct inode *inode_ptr, *empty;
-    acquire(&itable.lock);
+    //    acquire(&itable.lock);
+    acquire_mutex_sleep(&itable.lock);
     // Is the inode already in the table?
     empty = NULL;
     for (inode_ptr = &itable.inode[0]; inode_ptr < &itable.inode[NINODE]; inode_ptr++) {
-        if (inode_ptr->ref > 0 && inode_ptr->dev == dev && inode_ptr->inum == inum) {
+        if (inode_ptr->ref > 0 && inode_ptr->dev == ROOTDEV && strcmp(inode_ptr->path, "/") == 0) {
             inode_ptr->ref++;
-            release(&itable.lock);
+            //    release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
             return inode_ptr;
         }
-        if (empty == 0 && inode_ptr->ref == 0) // Remember empty slot.
-            empty = inode_ptr;
+        if (inode_ptr->ref == 0) { // Remember empty slot.
+            empty = inode_ptr; // still holding lock
+            break;
+        }
     }
 
     // Recycle an inode entry.
@@ -188,11 +224,22 @@ iget(uint dev, uint inum) {
         panic("iget: no inodes");
 
     inode_ptr = empty;
-    inode_ptr->dev = dev;
-    inode_ptr->inum = inum;
+
+    // open root directory via fatfs interface
+    FRESULT result = f_opendir(&inode_ptr->dir, "/");
+    if (result != FR_OK) {
+        printf("f_opendir failed: %d\n", result);
+        panic("iget_root: f_opendir failed");
+    }
+
+    // fill other fields in inode
+    inode_ptr->dev = ROOTDEV;
     inode_ptr->ref = 1;
-    inode_ptr->valid = 0;
-    release(&itable.lock);
+    inode_ptr->type = T_DIR;
+    strcpy(inode_ptr->path, "/");
+
+//    acquire(&itable.lock);
+    release_mutex_sleep(&itable.lock);
     return inode_ptr;
 }
 
@@ -205,29 +252,31 @@ iget(uint dev, uint inum) {
 // case it has to free the inode.
 void iput(struct inode *ip) {
     tracecore("iput");
-    acquire(&itable.lock);
+    KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
+//    acquire(&itable.lock);
+    acquire_mutex_sleep(&itable.lock);
+    KERNEL_ASSERT(ip->ref > 0, "inode ref can not be 0");
 
-    if (ip->ref == 1 && ip->valid && ip->num_link == 0) {
-        // inode has no links and no other references: truncate and free.
-
-        // ip->ref == 1 means no other process can have ip locked,
-        // so this acquire_mutex_sleep() won't block (or deadlock).
-        acquire_mutex_sleep(&ip->lock);
-
-        release(&itable.lock);
-
-        itrunc(ip);
-        ip->type = 0;
-        iupdate(ip);
-        ip->valid = 0;
-
-        release_mutex_sleep(&ip->lock);
-
-        acquire(&itable.lock);
+    if (ip->ref == 1) {
+        if (ip->type == T_DIR) {
+            // close directory via fatfs interface
+            FRESULT result = f_closedir(&ip->dir);
+            if (result != FR_OK) {
+                printf("iput: f_closedir failed, result = %d\n", result);
+                panic("iput: f_closedir failed");
+            }
+        } else {
+            // close file via fatfs interface
+            FRESULT result = f_close(&ip->file);
+            if (result != FR_OK) {
+                printf("iput: f_close failed, result = %d\n", result);
+                panic("iput: f_close failed");
+            }
+        }
     }
-
     ip->ref--;
-    release(&itable.lock);
+//    release(&itable.lock);
+    release_mutex_sleep(&itable.lock);
 }
 
 // Increment reference count for ip.
@@ -235,13 +284,13 @@ void iput(struct inode *ip) {
 struct inode *
 idup(struct inode *ip) {
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
-    acquire(&itable.lock);
+//    acquire(&itable.lock);
+    acquire_mutex_sleep(&itable.lock);
     ip->ref++;
-    release(&itable.lock);
+//    release(&itable.lock);
+    release_mutex_sleep(&itable.lock);
     return ip;
 }
-
-
 
 // Common idiom: unlock, then put.
 void iunlockput(struct inode *ip) {
@@ -249,26 +298,24 @@ void iunlockput(struct inode *ip) {
     iput(ip);
 }
 
-
-
 // Reads the inode from disk if necessary.
-void ivalid(struct inode *ip) {
-    debugcore("ivalid");
-
-    struct buf *bp;
-    struct dinode *dip;
-    if (ip->valid == 0) {
-        bp = acquire_buf_and_read(ip->dev, BLOCK_CONTAINING_INODE(ip->inum, sb));
-        dip = (struct dinode *)bp->data + ip->inum % INODES_PER_BLOCK;
-        ip->type = dip->type;
-        ip->size = dip->size;
-        memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
-        release_buf(bp);
-        ip->valid = 1;
-        if (ip->type == 0)
-            panic("ivalid: no type");
-    }
-}
+//void ivalid(struct inode *ip) {
+//    debugcore("ivalid");
+//
+//    struct buf *bp;
+//    struct dinode *dip;
+//    if (ip->valid == 0) {
+//        bp = acquire_buf_and_read(ip->dev, BLOCK_CONTAINING_INODE(ip->inum, sb));
+//        dip = (struct dinode *)bp->data + ip->inum % INODES_PER_BLOCK;
+//        ip->type = dip->type;
+//        ip->size = dip->size;
+//        memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+//        release_buf(bp);
+//        ip->valid = 1;
+//        if (ip->type == 0)
+//            panic("ivalid: no type");
+//    }
+//}
 
 
 
@@ -276,27 +323,56 @@ void ivalid(struct inode *ip) {
 // Read data from inode.
 // If user_dst==1, then dst is a user virtual address;
 // otherwise, dst is a kernel address.
+//int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
+//    // debugcore("readi");
+//    uint tot, m;
+//    struct buf *bp;
+//
+//    if (off > ip->size || off + n < off)
+//        return 0;
+//    if (off + n > ip->size)
+//        n = ip->size - off;
+//
+//    for (tot = 0; tot < n; tot += m, off += m, dst += m) {
+//        bp = acquire_buf_and_read(ip->dev, bmap(ip, off / BSIZE));
+//        m = MIN(n - tot, BSIZE - off % BSIZE);
+//        if (either_copyout((char *)dst, (char *)bp->data + (off % BSIZE), m, user_dst) == -1) {
+//            release_buf(bp);
+//            tot = -1;
+//            break;
+//        }
+//        release_buf(bp);
+//    }
+//    return tot;
+//}
+
 int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
-    // debugcore("readi");
-    uint tot, m;
-    struct buf *bp;
+    KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 
-    if (off > ip->size || off + n < off)
+    // seek to the right position
+    if (f_lseek(&ip->file, off) != FR_OK) {
         return 0;
-    if (off + n > ip->size)
-        n = ip->size - off;
-
-    for (tot = 0; tot < n; tot += m, off += m, dst += m) {
-        bp = acquire_buf_and_read(ip->dev, bmap(ip, off / BSIZE));
-        m = MIN(n - tot, BSIZE - off % BSIZE);
-        if (either_copyout((char *)dst, (char *)bp->data + (off % BSIZE), m, user_dst) == -1) {
-            release_buf(bp);
-            tot = -1;
-            break;
-        }
-        release_buf(bp);
     }
-    return tot;
+
+    uint total = 0;
+    // read data
+    if (!user_dst) {
+        // kernel address, read directly
+        if (f_read(&ip->file, dst, n, &total) != FR_OK) {
+            return 0;
+        }
+        return total;
+    } else {
+        // user address, copyout
+        char buf[n];
+        if (f_read(&ip->file, buf, n, &total) != FR_OK) {
+            return 0;
+        }
+        if (copyout(curr_proc()->pagetable, dst, buf, total) < 0) {
+            return 0;
+        }
+        return total;
+    }
 }
 
 // Write data to inode.
@@ -306,77 +382,88 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
 // Returns the number of bytes successfully written.
 // If the return value is less than the requested n,
 // there was an error of some kind.
+//int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
+//    uint tot, m;
+//    struct buf *bp;
+//
+//    if (off > ip->size || off + n < off)
+//        return -1;
+//    if (off + n > MAXFILE * BSIZE)
+//        return -1;
+//
+//    for (tot = 0; tot < n; tot += m, off += m, src += m) {
+//        bp = acquire_buf_and_read(ip->dev, bmap(ip, off / BSIZE));
+//        m = MIN(n - tot, BSIZE - off % BSIZE);
+//        if (either_copyin((char *)bp->data + (off % BSIZE), (char *)src, m, user_src) == -1) {
+//            release_buf(bp);
+//            break;
+//        }
+//        write_buf_to_disk(bp);
+//        release_buf(bp);
+//    }
+//
+//    if (off > ip->size)
+//        ip->size = off;
+//
+//    // write the i-node back to disk even if the size didn't change
+//    // because the loop above might have called bmap() and added a new
+//    // block to ip->addrs[].
+//    iupdate(ip);
+//
+//    return tot;
+//}
+
 int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
-    uint tot, m;
-    struct buf *bp;
+    KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 
-    if (off > ip->size || off + n < off)
-        return -1;
-    if (off + n > MAXFILE * BSIZE)
-        return -1;
-
-    for (tot = 0; tot < n; tot += m, off += m, src += m) {
-        bp = acquire_buf_and_read(ip->dev, bmap(ip, off / BSIZE));
-        m = MIN(n - tot, BSIZE - off % BSIZE);
-        if (either_copyin((char *)bp->data + (off % BSIZE), (char *)src, m, user_src) == -1) {
-            release_buf(bp);
-            break;
-        }
-        write_buf_to_disk(bp);
-        release_buf(bp);
+    // seek to the right position
+    if (f_lseek(&ip->file, off) != FR_OK) {
+        return 0;
     }
 
-    if (off > ip->size)
-        ip->size = off;
-
-    // write the i-node back to disk even if the size didn't change
-    // because the loop above might have called bmap() and added a new
-    // block to ip->addrs[].
-    iupdate(ip);
-
-    return tot;
+    uint total = 0;
+    // read data
+    if (!user_src) {
+        // kernel address, write directly
+        if (f_write(&ip->file, src, n, &total) != FR_OK) {
+            return 0;
+        }
+        return total;
+    } else {
+        // user address, copyin
+        char buf[n];
+        if (copyin(curr_proc()->pagetable, buf, src, n) < 0) {
+            return 0;
+        }
+        if (f_write(&ip->file, buf, n, &total) != FR_OK) {
+            return 0;
+        }
+        return total;
+    }
 }
-
 
 
 // Lock the given inode.
 // Reads the inode from disk if necessary.
 void ilock(struct inode *ip) {
-    struct buf *bp;
-    struct dinode *dip;
 
     if (ip == 0 || ip->ref < 1)
         panic("ilock");
 
     acquire_mutex_sleep(&ip->lock);
-
-    if (ip->valid == 0) {
-        bp = acquire_buf_and_read(ip->dev, BLOCK_CONTAINING_INODE(ip->inum, sb));
-        dip = (struct dinode *)bp->data + ip->inum % INODES_PER_BLOCK;
-        ip->type = dip->type;
-        ip->major = dip->major;
-        ip->minor = dip->minor;
-        ip->num_link = dip->num_link;
-        ip->size = dip->size;
-        memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
-        release_buf(bp);
-        ip->valid = 1;
-        if (ip->type == 0) {
-            errorf("dev=%d, inum=%d", (int)ip->dev, (int)ip->inum);
-            panic("ilock: no type, this disk inode is invalid");
-        }
-    }
 }
 
 // Unlock the given inode.
 void iunlock(struct inode *ip) {
-    if (ip == NULL || !holdingsleep(&ip->lock) || ip->ref < 1)
-        panic("iunlock");
+//    print_inode(ip);
+    KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
+    KERNEL_ASSERT(holdingsleep(&ip->lock), "inode is not locked");
+    KERNEL_ASSERT(ip->ref >= 1, "inode ref can not be 0");
+//    if (ip == NULL || !holdingsleep(&ip->lock) || ip->ref < 1)
+//        panic("iunlock");
 
     release_mutex_sleep(&ip->lock);
 }
-
-
 
 
 struct inode *
@@ -400,9 +487,14 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
     debugcore("inode_or_parent_by_name");
     if (*path == '/') {
         // absolute path
-        ip = iget(ROOTDEV, ROOTINO);
+        ip = iget_root();
     } else {
         // relative path
+        // only if the current process is the shell, cwd can be NULL
+        // because fs may sleep, so we can't initialize it in the kernel init code
+        if (curr_proc()->cwd == NULL) {
+            curr_proc()->cwd = iget_root();
+        }
         ip = idup(curr_proc()->cwd);
     }
 
@@ -417,7 +509,7 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
             iunlock(ip);
             return ip;
         }
-        if ((next = dirlookup(ip, name, 0)) == 0) {
+        if ((next = dirlookup(ip, name)) == 0) {
             iunlockput(ip);
             return 0;
         }
@@ -440,63 +532,307 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
-static uint
-bmap(struct inode *ip, uint bn) {
-    uint addr, *a;
-    struct buf *bp;
-
-    if (bn < NDIRECT) {
-        if ((addr = ip->addrs[bn]) == 0)
-            ip->addrs[bn] = addr = alloc_zeroed_block(ip->dev);
-        return addr;
-    }
-    bn -= NDIRECT;
-
-    if (bn < NINDIRECT) {
-        // Load indirect block, allocating if necessary.
-        if ((addr = ip->addrs[NDIRECT]) == 0)
-            ip->addrs[NDIRECT] = addr = alloc_zeroed_block(ip->dev);
-        bp = acquire_buf_and_read(ip->dev, addr);
-        a = (uint *)bp->data;
-        if ((addr = a[bn]) == 0) {
-            a[bn] = addr = alloc_zeroed_block(ip->dev);
-            write_buf_to_disk(bp);
-        }
-        release_buf(bp);
-        return addr;
-    }
-
-    panic("bmap: out of range");
-    return 0;
-}
+//static uint
+//bmap(struct inode *ip, uint bn) {
+//    uint addr, *a;
+//    struct buf *bp;
+//
+//    if (bn < NDIRECT) {
+//        if ((addr = ip->addrs[bn]) == 0)
+//            ip->addrs[bn] = addr = alloc_zeroed_block(ip->dev);
+//        return addr;
+//    }
+//    bn -= NDIRECT;
+//
+//    if (bn < NINDIRECT) {
+//        // Load indirect block, allocating if necessary.
+//        if ((addr = ip->addrs[NDIRECT]) == 0)
+//            ip->addrs[NDIRECT] = addr = alloc_zeroed_block(ip->dev);
+//        bp = acquire_buf_and_read(ip->dev, addr);
+//        a = (uint *)bp->data;
+//        if ((addr = a[bn]) == 0) {
+//            a[bn] = addr = alloc_zeroed_block(ip->dev);
+//            write_buf_to_disk(bp);
+//        }
+//        release_buf(bp);
+//        return addr;
+//    }
+//
+//    panic("bmap: out of range");
+//    return 0;
+//}
 
 // Truncate inode (discard contents).
 // Caller must hold ip->lock.
+//void itrunc(struct inode *ip) {
+//    tracecore("itrunc");
+//    int i, j;
+//    struct buf *bp;
+//    uint *a;
+//
+//    for (i = 0; i < NDIRECT; i++) {
+//        if (ip->addrs[i]) {
+//            free_disk_block(ip->dev, ip->addrs[i]);
+//            ip->addrs[i] = 0;
+//        }
+//    }
+//
+//    if (ip->addrs[NDIRECT]) {
+//        bp = acquire_buf_and_read(ip->dev, ip->addrs[NDIRECT]);
+//        a = (uint *)bp->data;
+//        for (j = 0; j < NINDIRECT; j++) {
+//            if (a[j])
+//                free_disk_block(ip->dev, a[j]);
+//        }
+//        release_buf(bp);
+//        free_disk_block(ip->dev, ip->addrs[NDIRECT]);
+//        ip->addrs[NDIRECT] = 0;
+//    }
+//
+//    ip->size = 0;
+//    iupdate(ip);
+//}
+
+// do unlock and put, because we should close the file at first, iput is not compatible
 void itrunc(struct inode *ip) {
-    tracecore("itrunc");
-    int i, j;
-    struct buf *bp;
-    uint *a;
 
-    for (i = 0; i < NDIRECT; i++) {
-        if (ip->addrs[i]) {
-            free_disk_block(ip->dev, ip->addrs[i]);
-            ip->addrs[i] = 0;
+    KERNEL_ASSERT(ip != NULL, "itrunc: inode is NULL");
+
+    iunlockput(ip);
+
+    KERNEL_ASSERT(ip->ref == 0, "itrunc: ref is not 0");
+    FRESULT result;
+    result = f_unlink(ip->path);
+    KERNEL_ASSERT(result == FR_OK, "itrunc: f_unlink failed");
+
+}
+
+struct inode *
+dirlookup(struct inode *dp, char *name) {
+    KERNEL_ASSERT(dp->type == T_DIR, "dirlookup: not a directory");
+
+    // get absolute path of the queried entity
+    char path[MAXPATH];
+    memmove(path, dp->path, MAXPATH);
+    strcat(path, "/");
+    strcat(path, name);
+
+    // get the inode of the queried entity
+    struct inode *inode_ptr, *empty;
+//    acquire(&itable.lock);
+    acquire_mutex_sleep(&itable.lock);
+    // Is the inode already in the table?
+    empty = NULL;
+    for (inode_ptr = &itable.inode[0]; inode_ptr < &itable.inode[NINODE]; inode_ptr++) {
+        if (inode_ptr->ref > 0 && inode_ptr->dev == ROOTDEV && strcmp(inode_ptr->path, path) == 0) {
+            inode_ptr->ref++;
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return inode_ptr;
         }
+        if (empty == 0 && inode_ptr->ref == 0) // Remember empty slot.
+            empty = inode_ptr;
     }
 
-    if (ip->addrs[NDIRECT]) {
-        bp = acquire_buf_and_read(ip->dev, ip->addrs[NDIRECT]);
-        a = (uint *)bp->data;
-        for (j = 0; j < NINDIRECT; j++) {
-            if (a[j])
-                free_disk_block(ip->dev, a[j]);
+    // Recycle an inode entry.
+    if (empty == NULL)
+        panic("iget: no inodes");
+
+    inode_ptr = empty;
+
+    // try to open root directory via fatfs interface
+    if (f_opendir(&inode_ptr->dir, path) == FR_OK) {
+        inode_ptr->dev = ROOTDEV;
+        inode_ptr->ref = 1;
+        inode_ptr->type = T_DIR;
+        strcpy(inode_ptr->path, path);
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return inode_ptr;
+
+        // try to open file via fatfs interface
+    } else if (f_open(&inode_ptr->file, path, FA_READ | FA_WRITE) == FR_OK) {
+
+        // check special file type (device)
+        struct device devinfo = {};
+        uint br = 0;
+        if (f_read(&inode_ptr->file, &devinfo, sizeof(devinfo), &br) == FR_OK &&
+            br == sizeof(devinfo) &&
+            devinfo.magic == DEVICE_MAGIC) {
+            // no need to maintain the file open because it is a device
+            f_close(&inode_ptr->file);
+            inode_ptr->dev = ROOTDEV;
+            inode_ptr->ref = 1;
+            inode_ptr->type = T_DEVICE;
+            inode_ptr->device.major = devinfo.major;
+            inode_ptr->device.minor = devinfo.minor;
+            strcpy(inode_ptr->path, path);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return inode_ptr;
+        } else {
+            inode_ptr->dev = ROOTDEV;
+            inode_ptr->ref = 1;
+            inode_ptr->type = T_FILE;
+            strcpy(inode_ptr->path, path);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return inode_ptr;
         }
-        release_buf(bp);
-        free_disk_block(ip->dev, ip->addrs[NDIRECT]);
-        ip->addrs[NDIRECT] = 0;
+
+    } else {
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return NULL;
+    }
+}
+
+struct inode *
+icreate(struct inode *dp, char *name, int type, int major, int minor) {
+    KERNEL_ASSERT(dp->type == T_DIR, "icreate_file: not a directory");
+
+    printf("icreate: %s\n", name);
+    printf("current directory: %s\n", dp->path);
+    // get absolute path of the queried entity
+    char path[MAXPATH];
+    memmove(path, dp->path, MAXPATH);
+    if (path[strlen(path) - 1] != '/') {
+        strcat(path, "/");
+    }
+    strcat(path, name);
+    printf("icreate: path: %s\n", path);
+
+    // create the inode of the queried entity
+    // get the inode of the queried entity
+    struct inode *inode_ptr, *empty;
+//    acquire(&itable.lock);
+    acquire_mutex_sleep(&itable.lock);
+    // Is the inode already in the table?
+    empty = NULL;
+    for (inode_ptr = &itable.inode[0]; inode_ptr < &itable.inode[NINODE]; inode_ptr++) {
+        if (inode_ptr->ref > 0 && inode_ptr->dev == ROOTDEV && strcmp(inode_ptr->path, path) == 0) {
+            inode_ptr->ref++;
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return inode_ptr;
+        }
+        if (empty == 0 && inode_ptr->ref == 0) // Remember empty slot.
+            empty = inode_ptr;
     }
 
-    ip->size = 0;
-    iupdate(ip);
+    // Recycle an inode entry.
+    if (empty == NULL)
+        panic("iget: no inodes");
+
+    inode_ptr = empty;
+    FRESULT result;
+
+    printf("inode_ptr: %p\n", inode_ptr);
+
+    if (type == T_DIR) {
+        printf("icreate::dir: %s\n", path);
+        // create directory via fatfs interface
+        if ((result = f_mkdir(path)) != FR_OK) {
+            printf("icreate::dir: f_mkdir failed: %d\n", result);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return NULL;
+        }
+        if ((result = f_opendir(&inode_ptr->dir, path)) != FR_OK) {
+            printf("icreate::dir: f_opendir failed: %d\n", result);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return NULL;
+        }
+        inode_ptr->dev = ROOTDEV;
+        inode_ptr->ref = 1;
+        inode_ptr->type = T_DIR;
+        strcpy(inode_ptr->path, path);
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return inode_ptr;
+
+    } else if (type == T_FILE) {
+        printf("icreate::file: %s\n", path);
+        // create file via fatfs interface
+        if ((result = f_open(&inode_ptr->file, path, FA_CREATE_ALWAYS | FA_WRITE | FA_READ)) != FR_OK) {
+            printf("icreate::file: f_open failed: %d\n", result);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return NULL;
+        }
+        inode_ptr->dev = ROOTDEV;
+        inode_ptr->ref = 1;
+        inode_ptr->type = T_FILE;
+        strcpy(inode_ptr->path, path);
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return inode_ptr;
+
+    } else if (type == T_DEVICE) {
+        printf("icreate::device: %s\n", path);
+        // create device via fatfs interface
+        struct device devinfo = {
+                .magic = DEVICE_MAGIC,
+                .major = major,
+                .minor = minor
+        };
+        uint bw = 0;
+        if ((result = f_open(&inode_ptr->file, path, FA_CREATE_ALWAYS | FA_WRITE | FA_READ)) != FR_OK ||
+            (result = f_write(&inode_ptr->file, &devinfo, sizeof(devinfo), &bw)) != FR_OK ||
+            bw != sizeof(devinfo)) {
+            printf("icreate::device: f_open/f_write failed: %d\n", result);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return NULL;
+        }
+        inode_ptr->dev = ROOTDEV;
+        inode_ptr->ref = 1;
+        inode_ptr->type = T_DEVICE;
+        inode_ptr->device.major = major;
+        inode_ptr->device.minor = minor;
+        strcpy(inode_ptr->path, path);
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return inode_ptr;
+
+    } else {
+        printf("icreate: unknown type: %d\n", type);
+//        release(&itable.lock);
+        release_mutex_sleep(&itable.lock);
+        return NULL;
+    }
+}
+
+static
+void print_inode(struct inode *ip) {
+    printf("inode: %p\n", ip);
+    printf("  dev: %d\n", ip->dev);
+    printf("  ref: %d\n", ip->ref);
+    switch (ip->type) {
+        case T_DIR:
+            printf("  type: directory\n");
+            break;
+        case T_FILE:
+            printf("  type: file\n");
+            break;
+        case T_DEVICE:
+            printf("  type: device\n");
+            break;
+        default:
+            printf("  type: unknown\n");
+            break;
+    }
+    printf("  path: %s\n", ip->path);
+}
+
+void inode_test() {
+    struct inode *root = iget_root();
+    print_inode(root);
+    struct inode *file = icreate(root, "test.txt", T_FILE, 0, 0);
+    print_inode(file);
+
+
+
+    panic("inode_test complete");
 }

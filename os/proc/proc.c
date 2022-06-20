@@ -8,6 +8,7 @@
 #include <utils/log.h>
 #include <mem/shared.h>
 #include <fatfs/fftest.h>
+#include <fatfs/init.h>
 
 struct proc pool[NPROC];
 
@@ -236,7 +237,7 @@ found:
        p->shmem_map_start[i]= 0;
     }
     p->next_shmem_addr = 0;
-    
+
     return p;
 }
 
@@ -253,8 +254,10 @@ void forkret(void) {
         // regular process (e.g., because it calls sleep), and thus cannot
         // be run from main().
         first = FALSE;
-//        fsinit();
-        fftest_qemu();
+//        fftest_qemu();
+        ffinit();
+        printf("init file system\n");
+//        inode_test();
     }
 
     usertrapret();
@@ -379,8 +382,11 @@ void wakeup(void *waiting_target) {
 
     for (p = pool; p < &pool[NPROC]; p++) {
         if (p != curr_proc()) {
+            if (p->state != SLEEPING) {
+                continue;
+            }
             acquire(&p->lock);
-            if (p->state == SLEEPING && p->waiting_target == waiting_target) {
+            if (p->waiting_target == waiting_target) {
                 p->state = RUNNABLE;
             }
             release(&p->lock);

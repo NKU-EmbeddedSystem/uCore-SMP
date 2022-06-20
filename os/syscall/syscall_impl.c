@@ -401,101 +401,103 @@ int sys_dup(int oldfd) {
 
 // Create the path new as a link to the same inode as old.
 int sys_link(char *oldpath_va, char *newpath_va) {
-    char name[DIRSIZ], new[MAXPATH], old[MAXPATH];
-    struct inode *dp, *ip;
-
-    struct proc *p = curr_proc();
-    if (copyinstr(p->pagetable, old, (uint64)oldpath_va, MAXPATH) != 0) {
-        return -1;
-    }
-    if (copyinstr(p->pagetable, new, (uint64)newpath_va, MAXPATH) != 0) {
-        return -1;
-    }
-
-    if ((ip = inode_by_name(old)) == 0) {
-        return -1;
-    }
-
-    ilock(ip);
-    if (ip->type == T_DIR) {
-        iunlockput(ip);
-        return -1;
-    }
-
-    ip->num_link++;
-    iupdate(ip);
-    iunlock(ip);
-
-    if ((dp = inode_parent_by_name(new, name)) == 0)
-        goto bad;
-    ilock(dp);
-    if (dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0) {
-        iunlockput(dp);
-        goto bad;
-    }
-    iunlockput(dp);
-    iput(ip);
-
-    return 0;
-
-bad:
-    ilock(ip);
-    ip->num_link--;
-    iupdate(ip);
-    iunlockput(ip);
-
     return -1;
+//    char name[DIRSIZ], new[MAXPATH], old[MAXPATH];
+//    struct inode *dp, *ip;
+//
+//    struct proc *p = curr_proc();
+//    if (copyinstr(p->pagetable, old, (uint64)oldpath_va, MAXPATH) != 0) {
+//        return -1;
+//    }
+//    if (copyinstr(p->pagetable, new, (uint64)newpath_va, MAXPATH) != 0) {
+//        return -1;
+//    }
+//
+//    if ((ip = inode_by_name(old)) == 0) {
+//        return -1;
+//    }
+//
+//    ilock(ip);
+//    if (ip->type == T_DIR) {
+//        iunlockput(ip);
+//        return -1;
+//    }
+//
+//    ip->num_link++;
+//    iupdate(ip);
+//    iunlock(ip);
+//
+//    if ((dp = inode_parent_by_name(new, name)) == 0)
+//        goto bad;
+//    ilock(dp);
+//    if (dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0) {
+//        iunlockput(dp);
+//        goto bad;
+//    }
+//    iunlockput(dp);
+//    iput(ip);
+//
+//    return 0;
+//
+//bad:
+//    ilock(ip);
+//    ip->num_link--;
+//    iupdate(ip);
+//    iunlockput(ip);
+//
+//    return -1;
 }
 
 int sys_unlink(char *pathname_va) {
-    struct inode *ip, *dp;
-    struct dirent de;
-    char name[DIRSIZ], path[MAXPATH];
-    uint off;
-
-    struct proc *p = curr_proc();
-    if (copyinstr(p->pagetable, path, (uint64)pathname_va, MAXPATH) != 0) {
-        return -1;
-    }
-
-    if ((dp = inode_parent_by_name(path, name)) == 0) {
-        return -1;
-    }
-
-    ilock(dp);
-
-    // Cannot unlink "." or "..".
-    if (namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
-        goto bad;
-
-    if ((ip = dirlookup(dp, name, &off)) == 0)
-        goto bad;
-    ilock(ip);
-
-    if (ip->num_link < 1)
-        panic("unlink: nlink < 1");
-    if (ip->type == T_DIR && !isdirempty(ip)) {
-        iunlockput(ip);
-        goto bad;
-    }
-
-    memset(&de, 0, sizeof(de));
-    if (writei(dp, 0, &de, off, sizeof(de)) != sizeof(de))
-        panic("unlink: writei");
-    if (ip->type == T_DIR) {
-        dp->num_link--;
-        iupdate(dp);
-    }
-    iunlockput(dp);
-
-    ip->num_link--;
-    iupdate(ip);
-    iunlockput(ip);
-    return 0;
-
-bad:
-    iunlockput(dp);
     return -1;
+//    struct inode *ip, *dp;
+//    struct dirent de;
+//    char name[DIRSIZ], path[MAXPATH];
+//    uint off;
+//
+//    struct proc *p = curr_proc();
+//    if (copyinstr(p->pagetable, path, (uint64)pathname_va, MAXPATH) != 0) {
+//        return -1;
+//    }
+//
+//    if ((dp = inode_parent_by_name(path, name)) == 0) {
+//        return -1;
+//    }
+//
+//    ilock(dp);
+//
+//    // Cannot unlink "." or "..".
+//    if (namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
+//        goto bad;
+//
+//    if ((ip = dirlookup(dp, name, &off)) == 0)
+//        goto bad;
+//    ilock(ip);
+//
+//    if (ip->num_link < 1)
+//        panic("unlink: nlink < 1");
+//    if (ip->type == T_DIR && !isdirempty(ip)) {
+//        iunlockput(ip);
+//        goto bad;
+//    }
+//
+//    memset(&de, 0, sizeof(de));
+//    if (writei(dp, 0, &de, off, sizeof(de)) != sizeof(de))
+//        panic("unlink: writei");
+//    if (ip->type == T_DIR) {
+//        dp->num_link--;
+//        iupdate(dp);
+//    }
+//    iunlockput(dp);
+//
+//    ip->num_link--;
+//    iupdate(ip);
+//    iunlockput(ip);
+//    return 0;
+//
+//bad:
+//    iunlockput(dp);
+//    return -1;
 }
 
 void*sys_sharedmem(char* name_va, size_t len){

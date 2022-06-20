@@ -92,12 +92,13 @@ struct inode * create(char *path, short type, short major, short minor) {
     struct inode *ip, *dp;
     char name[DIRSIZ];
 
+    printf("create %s\n", path);
     if ((dp = inode_parent_by_name(path, name)) == 0)
         return 0;
 
     ilock(dp);
 
-    if ((ip = dirlookup(dp, name, 0)) != 0) {
+    if ((ip = dirlookup(dp, name)) != 0) {
         iunlockput(dp);
         ilock(ip);
         if (type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
@@ -106,26 +107,30 @@ struct inode * create(char *path, short type, short major, short minor) {
         return 0;
     }
 
-    if ((ip = alloc_disk_inode(dp->dev, type)) == 0)
-        panic("create: ialloc");
+//    if ((ip = alloc_disk_inode(dp->dev, type)) == 0)
+//        panic("create: ialloc");
+//
+//    ilock(ip);
+//    ip->major = major;
+//    ip->minor = minor;
+//    ip->num_link = 1;
+//    iupdate(ip);
+//
+//    if (type == T_DIR) { // Create . and .. entries.
+//        dp->num_link++;  // for ".."
+//        iupdate(dp);
+//        // No ip->nlink++ for ".": avoid cyclic ref count.
+//        if (dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
+//            panic("create dots");
+//    }
+//
+//    if (dirlink(dp, name, ip->inum) < 0)
+//        panic("create: dirlink");
+//
+//    iunlockput(dp);
 
+    ip = icreate(dp, name, type, major, minor);
     ilock(ip);
-    ip->major = major;
-    ip->minor = minor;
-    ip->num_link = 1;
-    iupdate(ip);
-
-    if (type == T_DIR) { // Create . and .. entries.
-        dp->num_link++;  // for ".."
-        iupdate(dp);
-        // No ip->nlink++ for ".": avoid cyclic ref count.
-        if (dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
-            panic("create dots");
-    }
-
-    if (dirlink(dp, name, ip->inum) < 0)
-        panic("create: dirlink");
-
     iunlockput(dp);
 
     return ip;
@@ -181,7 +186,7 @@ int fileopen(char *path, int flags) {
         }
     }
 
-    if (ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)) {
+    if (ip->type == T_DEVICE && (ip->device.major < 0 || ip->device.major >= NDEV)) {
         iunlockput(ip);
         return -1;
     }
@@ -195,7 +200,7 @@ int fileopen(char *path, int flags) {
 
     if (ip->type == T_DEVICE) {
         f->type = FD_DEVICE;
-        f->major = ip->major;
+        f->major = ip->device.major;
     } else {
         f->type = FD_INODE;
         f->off = 0;
@@ -287,11 +292,11 @@ ssize_t fileread(struct file *f, void* dst_va, size_t len) {
 // addr is a user virtual address, pointing to a struct stat.
 int filestat(struct file *f, uint64 addr) {
     struct proc *p = curr_proc();
-    struct stat st;
+    struct stat st = {};
 
     if (f->type == FD_INODE || f->type == FD_DEVICE) {
         ilock(f->ip);
-        stati(f->ip, &st);
+//        stati(f->ip, &st);
         iunlock(f->ip);
         if (copyout(p->pagetable, addr, (char *)&st, sizeof(st)) < 0)
             return -1;
