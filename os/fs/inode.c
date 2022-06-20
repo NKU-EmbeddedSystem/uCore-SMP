@@ -468,7 +468,7 @@ void iunlock(struct inode *ip) {
 
 struct inode *
 inode_by_name(char *path) {
-    char name[DIRSIZ];
+    char name[DIRSIZ] = {};
     return inode_or_parent_by_name(path, 0, name);
 }
 
@@ -484,7 +484,7 @@ inode_parent_by_name(char *path, char *name) {
 static struct inode *
 inode_or_parent_by_name(char *path, int nameiparent, char *name) {
     struct inode *ip, *next;
-    debugcore("inode_or_parent_by_name");
+    debugcore("inode_or_parent_by_name, path: %s, nameiparent: %d, name: %s\n", path, nameiparent, name);
     if (*path == '/') {
         // absolute path
         ip = iget_root();
@@ -614,8 +614,11 @@ dirlookup(struct inode *dp, char *name) {
     // get absolute path of the queried entity
     char path[MAXPATH];
     memmove(path, dp->path, MAXPATH);
-    strcat(path, "/");
+    if (path[strlen(path) - 1] != '/') {
+        strcat(path, "/");
+    }
     strcat(path, name);
+    printf("dirlookup: path: %s\n", path);
 
     // get the inode of the queried entity
     struct inode *inode_ptr, *empty;

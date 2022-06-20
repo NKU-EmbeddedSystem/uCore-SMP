@@ -90,7 +90,7 @@ struct file *filealloc() {
 
 struct inode * create(char *path, short type, short major, short minor) {
     struct inode *ip, *dp;
-    char name[DIRSIZ];
+    char name[DIRSIZ] = {};
 
     printf("create %s\n", path);
     if ((dp = inode_parent_by_name(path, name)) == 0)
