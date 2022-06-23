@@ -103,8 +103,8 @@ void parse_line(){
         } else {
             int xstate = 0;
             int exit_pid = 0;
-            exit_pid = waitpid(pid, &xstate);
-            assert(pid == exit_pid, -1);
+            exit_pid = waitpid(pid, &xstate,0);
+            assert(pid == exit_pid);
             printf("Shell: Process %d exited with code %d\n", pid, xstate);
         }
     }
