@@ -16,18 +16,23 @@ static char* round_down_8 (char* p){
 int exec(char *name, int argc, const char **argv) {
     debug_print_args(name, argc, argv);
     
-    int id = get_app_id_by_name(name);
-    if (id < 0)
-        return -1;
+//    int id = get_app_id_by_name(name);
+//    if (id < 0)
+//        return -1;
     struct proc *p = curr_proc();
 
-    proc_free_mem_and_pagetable(p);
-    p->total_size = 0;
-    p->pagetable = proc_pagetable(p);
-    if (p->pagetable == 0) {
-        panic("");
+//    move to elf loader
+//    proc_free_mem_and_pagetable(p);
+//    p->total_size = 0;
+//    p->pagetable = proc_pagetable(p);
+//    if (p->pagetable == 0) {
+//        panic("");
+//    }
+
+//    loader(id, p);
+    if (elf_loader(name ,p) < 0) {
+        return -1;
     }
-    loader(id, p);
     safestrcpy(p->name, name, PROC_NAME_MAX);
     // push args
     char *sp = (char *)p->trapframe->sp;
