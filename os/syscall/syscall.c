@@ -34,8 +34,8 @@ char *syscall_names(int id)
         return "SYS_open";
     case SYS_close:
         return "SYS_close";
-    case SYS_pipe:
-        return "SYS_pipe";
+    case SYS_pipe2:
+        return "SYS_pipe2";
     case SYS_read:
         return "SYS_read";
     case SYS_write:
@@ -157,7 +157,7 @@ void syscall()
     case SYS_mknod:
         ret = sys_mknod((char *)args[0], args[1], args[2]);
         break;
-    case SYS_pipe:
+    case SYS_pipe2:
         ret = sys_pipe((int(*)[2])args[0]);
         break;
     case SYS_fstat:
