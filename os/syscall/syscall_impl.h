@@ -55,4 +55,6 @@ void* sys_sharedmem(char* name_va, size_t len);
 
 char * sys_getcwd(char *buf, size_t size);
 
+int sys_dup3(int oldfd, int newfd, int flags);
+
 #endif // SYSCALL_IMPL_H

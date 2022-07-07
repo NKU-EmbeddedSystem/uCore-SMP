@@ -553,3 +553,34 @@ char * sys_getcwd(char *buf, size_t size) {
         return NULL;
     }
 }
+
+int sys_dup3(int oldfd, int newfd, int flags) {
+    if (flags != 0) {
+        infof("sys_dup3: flags must be 0");
+        return -1;
+    }
+
+    struct file *f;
+    int fd;
+    struct proc *p = curr_proc();
+    f = get_proc_file_by_fd(p, oldfd);
+
+    if (f == NULL) {
+        infof("old fd is not valid");
+        print_proc(p);
+        return -1;
+    }
+
+    if (newfd == oldfd) {
+        // do nothing
+        // ref: https://linux.die.net/man/2/dup3
+        return newfd;
+    }
+
+    if ((fd = fdalloc2(f, newfd)) < 0) {
+        infof("cannot allocate new fd");
+        return -1;
+    }
+    filedup(f);
+    return fd;
+}

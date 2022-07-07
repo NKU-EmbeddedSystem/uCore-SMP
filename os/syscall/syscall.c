@@ -18,6 +18,8 @@ char *syscall_names(int id)
         return "SYS_getcwd";
     case SYS_dup:
         return "SYS_dup";
+    case SYS_dup3:
+        return "SYS_dup3";
     case SYS_mknod:
         return "SYS_mknod";
     case SYS_mkdir:
@@ -136,6 +138,9 @@ void syscall()
         break;
     case SYS_dup:
         ret = sys_dup((int)args[0]);
+        break;
+    case SYS_dup3:
+        ret = sys_dup3((int)args[0], (int)args[1], (int)args[2]);
         break;
     case SYS_fork:
         ret = sys_fork();

@@ -70,6 +70,7 @@ int wait(int, int *);
 struct proc *alloc_proc();
 void init_scheduler();
 int fdalloc(struct file *);
+int fdalloc2(struct file *, int);
 
 uint64 get_free_page_count();
 void *alloc_physical_page(void);

@@ -3,6 +3,7 @@
 
 #define SYS_getcwd 17
 #define SYS_dup 23
+#define SYS_dup3 24
 #define SYS_mknod 33
 #define SYS_mkdir 34
 #define SYS_link 37

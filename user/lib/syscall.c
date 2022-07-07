@@ -157,8 +157,7 @@ char *getcwd(char *buf, size_t size){
 }
 
 int dup2(int old, int _new){
-    return 0;
-    // return syscall(SYS_dup3, old, _new, 0);
+     return syscall(SYS_dup3, old, _new, 0);
 }
 
 int getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len){

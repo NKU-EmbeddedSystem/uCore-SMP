@@ -377,6 +377,19 @@ int fdalloc(struct file *f) {
     return -1;
 }
 
+int fdalloc2(struct file *f, int fd) {
+    struct proc *p = curr_proc();
+
+    if (fd < 0 || fd >= FD_MAX) {
+        return -1;
+    }
+    if (p->files[fd] != 0) {
+        return -1;
+    }
+    p->files[fd] = f;
+    return fd;
+}
+
 void wakeup(void *waiting_target) {
     struct proc *p;
 
