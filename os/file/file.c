@@ -160,6 +160,7 @@ filedup(struct file *f) {
  */
 int fileopen(char *path, int flags) {
     debugcore("fileopen");
+    infof("fileopen %s, flags %x\n", path, flags);
     int fd;
     struct file *f;
     struct inode *ip;
@@ -179,7 +180,7 @@ int fileopen(char *path, int flags) {
         }
         // the inode is found
         ilock(ip);
-        if (ip->type == T_DIR && flags != O_RDONLY) {
+        if (ip->type == T_DIR && flags != (O_RDONLY | O_DIRECTORY)) {
             iunlockput(ip);
             infof("Can only read a dir");
             return -1;
