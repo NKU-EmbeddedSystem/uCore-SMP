@@ -173,6 +173,9 @@ void syscall()
     case SYS_sharedmem:
         ret = (uint64)sys_sharedmem((char *)args[0], args[1]);
         break;
+    case SYS_getcwd:
+        ret = (uint64)sys_getcwd((char *)args[0], args[1]);
+        break;
     default:
         ret = -1;
         warnf("unknown syscall %d", (int)id);

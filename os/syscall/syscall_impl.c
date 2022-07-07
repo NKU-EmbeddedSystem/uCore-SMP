@@ -538,3 +538,18 @@ void*sys_sharedmem(char* name_va, size_t len){
 
     return shmem_va;
 }
+
+char * sys_getcwd(char *buf, size_t size) {
+    struct proc* p = curr_proc();
+    ilock(p->cwd);
+    int length = strlen(p->cwd->path);
+    if(length > size){
+        iunlock(p->cwd);
+        return NULL;
+    }
+    err_t err = copyout(p->pagetable, (uint64)buf, p->cwd->path, length);
+    iunlock(p->cwd);
+    if(err < 0){
+        return NULL;
+    }
+}

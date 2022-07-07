@@ -53,4 +53,6 @@ int64 sys_getpriority();
 
 void* sys_sharedmem(char* name_va, size_t len);
 
+char * sys_getcwd(char *buf, size_t size);
+
 #endif // SYSCALL_IMPL_H

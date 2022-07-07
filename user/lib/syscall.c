@@ -153,8 +153,7 @@ void* sharedmem(char* name, size_t len){
 // [NEW]
 
 char *getcwd(char *buf, size_t size){
-    return NULL;
-    // return (char*)syscall(SYS_getcwd, buf, size);
+     return (char*)syscall(SYS_getcwd, buf, size);
 }
 
 int dup2(int old, int _new){
