@@ -268,12 +268,21 @@ int sys_close(int fd) {
     return 0;
 }
 
-int sys_open( char *pathname_va, int flags){
-    debugcore("sys_open");
+//int sys_open( char *pathname_va, int flags){
+//    debugcore("sys_open");
+//    struct proc *p = curr_proc();
+//    char path[MAXPATH];
+//    copyinstr(p->pagetable, path, (uint64)pathname_va, MAXPATH);
+//    return fileopen(path, flags);
+//}
+
+// mode is ignored
+int sys_openat(int dirfd, char *filename, int flags, int mode) {
+    debugcore("sys_openat");
     struct proc *p = curr_proc();
     char path[MAXPATH];
-    copyinstr(p->pagetable, path, (uint64)pathname_va, MAXPATH);
-    return fileopen(path, flags);
+    copyinstr(p->pagetable, path, (uint64)filename, MAXPATH);
+    return fileopenat(dirfd, path, flags);
 }
 
 int64 sys_mmap(void *start, uint64 len, int prot) {

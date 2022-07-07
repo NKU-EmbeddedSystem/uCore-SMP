@@ -65,7 +65,7 @@ struct dinode {
 #define BITMAP_BLOCK_CONTAINING(blockid, sb) ((blockid) / BITS_PER_BITMAP_BLOCK + sb.bmapstart)
 
 // Directory is a file containing a sequence of dirent structures.
-#define DIRSIZ 14
+#define DIRSIZ 255
 
 struct dirent {
     ushort inum;

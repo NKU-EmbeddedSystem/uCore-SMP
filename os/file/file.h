@@ -66,6 +66,7 @@ ssize_t fileread(struct file *f, void *dst_va, size_t len);
 ssize_t filewrite(struct file *f, void *src_va, size_t len);
 struct file *filealloc();
 int fileopen(char *path, int flags);
+int fileopenat(int dirfd, char *filename, int flags);
 struct file *filedup(struct file *f);
 int filestat(struct file *f, uint64 addr);
 #define FILE_MAX (128 * 16)

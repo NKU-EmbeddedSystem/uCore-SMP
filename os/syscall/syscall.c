@@ -30,8 +30,8 @@ char *syscall_names(int id)
         return "SYS_unlink";
     case SYS_chdir:
         return "SYS_chdir";
-    case SYS_open:
-        return "SYS_open";
+    case SYS_openat:
+        return "SYS_openat";
     case SYS_close:
         return "SYS_close";
     case SYS_pipe2:
@@ -112,8 +112,8 @@ void syscall()
     case SYS_read:
         ret = sys_read(args[0], (void *)args[1], args[2]);
         break;
-    case SYS_open:
-        ret = sys_open((char *)args[0], args[1]);
+    case SYS_openat:
+        ret = sys_openat(args[0], (char *)args[1], args[2], args[3]);
         break;
     case SYS_close:
         ret = sys_close(args[0]);

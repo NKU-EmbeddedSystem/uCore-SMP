@@ -17,7 +17,9 @@ pid_t sys_getpid(void);
 
 pid_t sys_getppid();
 
-int sys_open( char *pathname_va, int flags);
+//int sys_open( char *pathname_va, int flags);
+
+int sys_openat(int dirfd, char *filename, int flags, int mode);
 
 int sys_mknod( char *pathname_va, short major, short minor);
 

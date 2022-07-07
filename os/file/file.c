@@ -165,6 +165,10 @@ int fileopen(char *path, int flags) {
     struct file *f;
     struct inode *ip;
 
+    // remove './' from the beginning of path
+    if (path[0] == '.' && path[1] == '/') {
+        path += 2;
+    }
 
     if (flags & O_CREATE) {
         ip = create(path, T_FILE, 0, 0);
@@ -216,6 +220,50 @@ int fileopen(char *path, int flags) {
 
     iunlock(ip);
     return fd;
+}
+
+int fileopenat(int dirfd, char *filename, int flags) {
+    // remove './' from the beginning of filename
+    if (filename[0] == '.' && filename[1] == '/') {
+        filename += 2;
+    }
+
+    // just the same as "open" primitive
+    if (filename[0] == '/' || dirfd == AT_FDCWD) {
+        return fileopen(filename, flags);
+    }
+
+    // real "openat"
+    if (dirfd < 0 || dirfd >= FD_MAX) {
+        infof("dirfd %d is invalid", dirfd);
+        return -1;
+    }
+
+    struct proc *p = curr_proc();
+    struct file *f = p->files[dirfd];
+
+    if (f == NULL) {
+        infof("fileopenat: invalid dirfd %d", dirfd);
+        return -1;
+    }
+
+    struct inode *inode = f->ip;
+    ilock(inode);
+    if (inode->type != T_DIR) {
+        infof("fileopenat: %s is not a dir", filename);
+        iunlock(inode);
+        return -1;
+    }
+
+    char path[MAXPATH];
+    int length = strlen(inode->path);
+    memmove(path, inode->path, length);
+    if (path[length - 1] != '/') {
+        strcat(path, "/");
+    }
+    strcat(path, filename);
+    iunlock(inode);
+    return fileopen(path, flags);
 }
 
 ssize_t filewrite(struct file *f, void* src_va, size_t len) {

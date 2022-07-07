@@ -39,9 +39,9 @@ pid_t getppid(void)
     return syscall(SYS_getppid);
 }
 
-int open(const char *pathname, int flags)
+int open(const char *path, int flags)
 {
-    return syscall(SYS_open, pathname, flags);
+    return syscall(SYS_openat, AT_FDCWD, path, flags, O_RDWR);
 }
 
 int mknod(const char *pathname, short major, short minor)
@@ -185,8 +185,7 @@ int umount(const char *special)
 
 int openat(int dirfd,const char *path, int flags)
 {
-    return 0;
-    // return syscall(SYS_openat, dirfd, path, flags);
+    return syscall(SYS_openat, dirfd, path, flags, 0600);
 }
 
 int brk(void *addr)

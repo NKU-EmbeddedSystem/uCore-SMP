@@ -9,7 +9,7 @@
 #define SYS_link 37
 #define SYS_unlink 38
 #define SYS_chdir 49
-#define SYS_open 56
+#define SYS_openat 56
 #define SYS_close 57
 #define SYS_pipe2 59
 #define SYS_read 63
