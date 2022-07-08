@@ -158,7 +158,7 @@ void syscall()
         ret = sys_mknod((char *)args[0], args[1], args[2]);
         break;
     case SYS_pipe2:
-        ret = sys_pipe((int(*)[2])args[0]);
+        ret = sys_pipe((int(*)[2])args[0], args[1]);
         break;
     case SYS_fstat:
         ret = sys_fstat((int)args[0], (void *)args[1]);

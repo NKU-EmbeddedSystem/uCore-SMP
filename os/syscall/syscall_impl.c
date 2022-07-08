@@ -27,7 +27,11 @@ int sys_fstat(int fd, struct stat *statbuf_va){
 
 }
 
-int sys_pipe(int (*pipefd_va)[2]) {
+int sys_pipe(int (*pipefd_va)[2], int flags) {
+    if (flags != 0) {
+        infof("pipe: flags must be 0");
+        return -1;
+    }
     struct proc *p = curr_proc();
     struct file *rf, *wf;
     int fd0, fd1;

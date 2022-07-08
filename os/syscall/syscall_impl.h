@@ -39,7 +39,7 @@ uint64 sys_time_ms();
 
 int sys_sleep(unsigned long long time_in_ms);
 
-int sys_pipe(int (*pipefd_va)[2]);
+int sys_pipe(int (*pipefd_va)[2], int flags);
 
 int sys_fstat(int fd, struct stat *statbuf_va);
 

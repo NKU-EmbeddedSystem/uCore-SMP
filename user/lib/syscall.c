@@ -102,7 +102,7 @@ int sleep(unsigned long long time_in_ms)
 
 int pipe(int pipefd[2])
 {
-    return syscall(SYS_pipe2, pipefd);
+    return syscall(SYS_pipe2, pipefd, 0);
 }
 
 int fstat(int fd, struct stat *statbuf)
