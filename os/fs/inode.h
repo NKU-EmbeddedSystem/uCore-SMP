@@ -63,4 +63,6 @@ void inode_test();
 
 int igetdents(struct inode *dp, char *buf, unsigned long len);
 
+int stati(struct inode *ip, struct kstat *st);
+
 #endif // INODE_H

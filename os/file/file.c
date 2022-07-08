@@ -351,17 +351,36 @@ ssize_t fileread(struct file *f, void* dst_va, size_t len) {
 // addr is a user virtual address, pointing to a struct stat.
 int filestat(struct file *f, uint64 addr) {
     struct proc *p = curr_proc();
-    struct stat st = {};
+    struct kstat st;
 
-    if (f->type == FD_INODE || f->type == FD_DEVICE) {
-        ilock(f->ip);
-//        stati(f->ip, &st);
-        iunlock(f->ip);
-        if (copyout(p->pagetable, addr, (char *)&st, sizeof(st)) < 0)
-            return -1;
-        return 0;
+    if (f->type != FD_INODE) {
+        infof("filestat: not an regular file (1)");
+        return -1;
     }
-    return -1;
+
+    ilock(f->ip);
+
+    if (f->ip->type != T_FILE) {
+        infof("filestat: not an regular file (2)");
+        iunlock(f->ip);
+        return -1;
+    }
+
+    int result = stati(f->ip, &st);
+    if (result < 0) {
+        infof("filestat: stati failed");
+        iunlock(f->ip);
+        return -1;
+    }
+
+    iunlock(f->ip);
+
+    if (copyout(p->pagetable, addr, (char *) &st, sizeof(st)) < 0) {
+        infof("filestat: copyout failed");
+        return -1;
+    }
+
+    return 0;
 }
 
 

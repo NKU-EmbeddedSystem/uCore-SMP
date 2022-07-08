@@ -887,3 +887,12 @@ int igetdents(struct inode* dp, char *buf, unsigned long len) {
 
     return (uint64)curr - (uint64)buf;
 }
+
+int stati(struct inode *ip, struct kstat *st) {
+    memset(st, 0, sizeof(struct kstat));
+    st->st_dev = ip->dev;
+    // fat32 doesn't support hardlink, so nlink must be 1
+    st->st_nlink = 1;
+    st->st_size = f_size(&ip->file);
+    return 0;
+}

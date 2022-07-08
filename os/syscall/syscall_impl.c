@@ -7,7 +7,7 @@
 #include <mem/shared.h>
 #define min(a, b) (a) < (b) ? (a) : (b);
 
-int sys_fstat(int fd, struct stat *statbuf_va){
+int sys_fstat(int fd, struct kstat *statbuf_va){
     struct proc *p = curr_proc();
 
     // invalid fd

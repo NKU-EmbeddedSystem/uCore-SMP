@@ -40,9 +40,9 @@ int sleep(unsigned long long time_in_ms);
 
 int pipe(int pipefd[2]);
 
-int fstat(int fd, struct stat *statbuf);
+int fstat(int fd, struct kstat *statbuf);
 
-int stat(const char *pathname, struct stat *statbuf);
+int stat(const char *pathname, struct kstat *statbuf);
 
 int chdir(const char *path);
 

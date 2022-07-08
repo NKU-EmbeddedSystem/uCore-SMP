@@ -105,12 +105,12 @@ int pipe(int pipefd[2])
     return syscall(SYS_pipe2, pipefd, 0);
 }
 
-int fstat(int fd, struct stat *statbuf)
+int fstat(int fd, struct kstat *statbuf)
 {
     return syscall(SYS_fstat, fd, statbuf);
 }
 
-int stat(const char *pathname, struct stat *statbuf)
+int stat(const char *pathname, struct kstat *statbuf)
 {
     int fd;
     int r;

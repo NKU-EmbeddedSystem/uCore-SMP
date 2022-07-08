@@ -7,6 +7,8 @@ struct stat;
 
 struct linux_dirent64;
 
+struct kstat;
+
 int sys_execv( char *pathname_va, char * argv_va[]);
 
 int sys_exit(int status);
@@ -45,7 +47,7 @@ int sys_sleep(unsigned long long time_in_ms);
 
 int sys_pipe(int (*pipefd_va)[2], int flags);
 
-int sys_fstat(int fd, struct stat *statbuf_va);
+int sys_fstat(int fd, struct kstat *statbuf_va);
 
 int sys_chdir(char *path_va);
 
