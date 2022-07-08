@@ -72,7 +72,7 @@ pid_t wait(int *wstatus)
 
 int mkdir(const char *pathname,unsigned int mode)
 {
-    return syscall(SYS_mkdir, pathname);
+    return syscall(SYS_mkdirat, AT_FDCWD, pathname, mode);
 }
 
 int close(int fd)

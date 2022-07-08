@@ -31,7 +31,9 @@ int sys_sched_yield(void);
 
 pid_t sys_waitpid(pid_t pid, int *wstatus_va);
 
-int sys_mkdir(char *pathname_va);
+//int sys_mkdir(char *pathname_va);
+
+int sys_mkdirat(int dirfd, char *path_va, unsigned int mode);
 
 int sys_close(int fd);
 

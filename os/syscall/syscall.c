@@ -22,8 +22,8 @@ char *syscall_names(int id)
         return "SYS_dup3";
     case SYS_mknod:
         return "SYS_mknod";
-    case SYS_mkdir:
-        return "SYS_mkdir";
+    case SYS_mkdirat:
+        return "SYS_mkdirat";
     case SYS_link:
         return "SYS_link";
     case SYS_unlink:
@@ -168,8 +168,8 @@ void syscall()
     case SYS_chdir:
         ret = sys_chdir((char *)args[0]);
         break;
-    case SYS_mkdir:
-        ret = sys_mkdir((char *)args[0]);
+    case SYS_mkdirat:
+        ret = sys_mkdirat(args[0], (char *)args[1], args[2]);
         break;
     case SYS_link:
         ret = sys_link((char *)args[0], (char *)args[1]);

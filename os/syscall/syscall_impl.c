@@ -3,6 +3,7 @@
 #include <file/file.h>
 #include <proc/proc.h>
 #include <file/stat.h>
+#include <file/fcntl.h>
 #include <mem/shared.h>
 #define min(a, b) (a) < (b) ? (a) : (b);
 
@@ -105,15 +106,70 @@ pid_t sys_fork() {
  * @param path_va Points to the path at user space
  * @return int64 0 if successfull, otherwise failed 
  */
-int sys_mkdir(char *path_va) {
+//int sys_mkdir(char *path_va) {
+//    struct proc *p = curr_proc();
+//    char path[MAXPATH];
+//    struct inode *ip;
+//
+//    if (copyinstr(p->pagetable, path, (uint64)path_va, MAXPATH) != 0) {
+//        return -2;
+//    }
+//    ip = create(path, T_DIR, 0, 0);
+//
+//    if (ip == NULL) {
+//        return -1;
+//    }
+//    iunlockput(ip);
+//
+//    return 0;
+//}
+
+// mode is ignored
+int sys_mkdirat(int dirfd, char *path_va, unsigned int mode) {
     struct proc *p = curr_proc();
     char path[MAXPATH];
+    char adjust_path[MAXPATH];
+    char * final_path;
     struct inode *ip;
 
     if (copyinstr(p->pagetable, path, (uint64)path_va, MAXPATH) != 0) {
         return -2;
     }
-    ip = create(path, T_DIR, 0, 0);
+
+    if (path[0] == '/' || dirfd == AT_FDCWD) {
+        final_path = path;
+    } else {
+        if (dirfd < 0 || dirfd >= FD_MAX) {
+            infof("sys_mkdirat: invalid dirfd %d (1)", dirfd);
+            return -1;
+        }
+
+        struct file *f = p->files[dirfd];
+        if (f == NULL) {
+            infof("sys_mkdirat: invalid dirfd %d (2)", dirfd);
+            return -1;
+        }
+
+        struct inode *inode = f->ip;
+        ilock(inode);
+        if (inode->type != T_DIR) {
+            infof("sys_mkdirat: %s is not a dir", inode->path);
+            iunlock(inode);
+            return -1;
+        }
+
+        int length = strlen(inode->path);
+        memmove(adjust_path, inode->path, length);
+        if (adjust_path[length - 1] != '/') {
+            strcat(adjust_path, "/");
+        }
+        strcat(adjust_path, path);
+        iunlock(inode);
+
+        final_path = adjust_path;
+    }
+
+    ip = create(final_path, T_DIR, 0, 0);
 
     if (ip == NULL) {
         return -1;
