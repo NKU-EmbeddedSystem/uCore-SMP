@@ -9,7 +9,7 @@
 #define O_TRUNC   0x400
 #define O_DIRECTORY 0x0200000
 
-#define AT_FDCWD -100
+#define AT_FDCWD (-100)
 
 #endif // FCNTL_H
 
