@@ -5,6 +5,8 @@
 
 struct stat;
 
+struct linux_dirent64;
+
 int sys_execv( char *pathname_va, char * argv_va[]);
 
 int sys_exit(int status);
@@ -58,5 +60,7 @@ void* sys_sharedmem(char* name_va, size_t len);
 char * sys_getcwd(char *buf, size_t size);
 
 int sys_dup3(int oldfd, int newfd, int flags);
+
+int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len);
 
 #endif // SYSCALL_IMPL_H

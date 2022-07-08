@@ -36,6 +36,8 @@ char *syscall_names(int id)
         return "SYS_close";
     case SYS_pipe2:
         return "SYS_pipe2";
+    case SYS_getdents64:
+        return "SYS_getdents64";
     case SYS_read:
         return "SYS_read";
     case SYS_write:
@@ -180,6 +182,9 @@ void syscall()
         break;
     case SYS_getcwd:
         ret = (uint64)sys_getcwd((char *)args[0], args[1]);
+        break;
+    case SYS_getdents64:
+        ret = sys_getdents((int)args[0], (void *)args[1], args[2]);
         break;
     default:
         ret = -1;

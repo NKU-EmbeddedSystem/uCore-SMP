@@ -151,6 +151,19 @@ filedup(struct file *f) {
     return f;
 }
 
+static char* fix_cwd_slashes(char *path) {
+    while(*path) {
+        if (path[0] == '.' && path[1] == '/') {
+            path += 2;
+        } else if (path[0] == '.'){
+            path++;
+        } else {
+            break;
+        }
+    }
+    return path;
+}
+
 /**
  * @brief Open a file
  * 
@@ -165,10 +178,8 @@ int fileopen(char *path, int flags) {
     struct file *f;
     struct inode *ip;
 
-    // remove './' from the beginning of path
-    if (path[0] == '.' && path[1] == '/') {
-        path += 2;
-    }
+    // remove './' & '.' from the beginning of path
+    path = fix_cwd_slashes(path);
 
     if (flags & O_CREATE) {
         ip = create(path, T_FILE, 0, 0);
@@ -184,7 +195,8 @@ int fileopen(char *path, int flags) {
         }
         // the inode is found
         ilock(ip);
-        if (ip->type == T_DIR && flags != (O_RDONLY | O_DIRECTORY)) {
+        // ignore O_DIRECTORY for directory
+        if (ip->type == T_DIR && (flags & ~O_DIRECTORY) != O_RDONLY) {
             iunlockput(ip);
             infof("Can only read a dir");
             return -1;
@@ -224,9 +236,7 @@ int fileopen(char *path, int flags) {
 
 int fileopenat(int dirfd, char *filename, int flags) {
     // remove './' from the beginning of filename
-    if (filename[0] == '.' && filename[1] == '/') {
-        filename += 2;
-    }
+    filename = fix_cwd_slashes(filename);
 
     // just the same as "open" primitive
     if (filename[0] == '/' || dirfd == AT_FDCWD) {
@@ -369,3 +379,20 @@ int filestat(struct file *f, uint64 addr) {
 //     mb->head = 0;
 //     return 1;
 // }
+
+int getdents(struct file *f, char *buf, unsigned long len) {
+    if (f->type != FD_INODE) {
+        infof("getdents: not a f (1)");
+        return -1;
+    }
+    ilock(f->ip);
+    if (f->ip->type != T_DIR) {
+        infof("getdents: not a f (2)");
+        iunlock(f->ip);
+        return -1;
+    }
+
+    int result = igetdents(f->ip, buf, len);
+    iunlock(f->ip);
+    return result;
+}

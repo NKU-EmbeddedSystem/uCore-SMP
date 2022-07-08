@@ -837,3 +837,53 @@ void inode_test() {
 
     panic("inode_test complete");
 }
+
+int igetdents(struct inode* dp, char *buf, unsigned long len) {
+
+    if (dp->type != T_DIR) {
+        infof("igetdents: not a dir (2)");
+        return -1;
+    }
+
+    // ref: http://elm-chan.org/fsw/ff/doc/readdir.html
+
+    FRESULT res;
+    static FILINFO fno;
+    int namelen;
+    struct linux_dirent64* curr;
+
+    if ((res = f_rewinddir(&dp->dir)) != FR_OK) {
+        infof("igetdents: f_rewinddir failed: %d", res);
+        return -1;
+    }
+
+    curr = (struct linux_dirent64*)buf;
+
+    for (;;) {
+        res = f_readdir(&dp->dir, &fno);       /* Read a directory item */
+        if (res != FR_OK) {
+            infof("igetdents: f_readdir failed: %d", res);
+            return -1;
+        }
+        if (fno.fname[0] == 0) {
+            break;                             /* Break on end of directory */
+        }
+
+        namelen = strlen(fno.fname);
+        if ((uint64)curr + sizeof(struct linux_dirent64) + namelen > (uint64)buf + len) {
+            infof("igetdents: buffer overflow");
+            return -1;
+        }
+        // fat32 not depends on ino & off
+        curr->d_ino = 0;
+        curr->d_off = 0;
+        curr->d_reclen = sizeof(struct linux_dirent64) + namelen;
+        // only support distinguish regular file and directory now
+        curr->d_type = fno.fattrib & AM_DIR ? DT_DIR : DT_REG;
+        strcpy(curr->d_name, fno.fname);
+
+        curr = (struct linux_dirent64*)((uint64)curr + curr->d_reclen);
+    }
+
+    return (uint64)curr - (uint64)buf;
+}

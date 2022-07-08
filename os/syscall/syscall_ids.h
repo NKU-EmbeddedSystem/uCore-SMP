@@ -12,6 +12,7 @@
 #define SYS_openat 56
 #define SYS_close 57
 #define SYS_pipe2 59
+#define SYS_getdents64 61
 #define SYS_read 63
 #define SYS_write 64
 #define SYS_fstat 80

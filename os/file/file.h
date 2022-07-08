@@ -69,6 +69,7 @@ int fileopen(char *path, int flags);
 int fileopenat(int dirfd, char *filename, int flags);
 struct file *filedup(struct file *f);
 int filestat(struct file *f, uint64 addr);
+int getdents(struct file *f, char *buf, unsigned long len);
 #define FILE_MAX (128 * 16)
 
 #define CONSOLE 1

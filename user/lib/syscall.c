@@ -161,8 +161,7 @@ int dup2(int old, int _new){
 }
 
 int getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len){
-    return 0;
-    // return syscall(SYS_getdents64, fd, dirp64, len);
+     return syscall(SYS_getdents64, fd, dirp64, len);
 }
 
 int mount(const char *special, const char *dir, const char *fstype, unsigned long flags, const void *data)

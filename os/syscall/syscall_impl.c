@@ -597,3 +597,26 @@ int sys_dup3(int oldfd, int newfd, int flags) {
     filedup(f);
     return fd;
 }
+
+int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len) {
+    struct file *f;
+    struct proc *p = curr_proc();
+    f = get_proc_file_by_fd(p, fd);
+    if (f == NULL) {
+        infof("fd is not valid");
+        print_proc(p);
+        return -1;
+    }
+
+    // buffer for kernel usage
+    char buf[len];
+    int result = getdents(f, buf, len);
+    if (result < 0) {
+        infof("getdents failed");
+        return -1;
+    }
+
+    // copy to user space if success
+    copyout(p->pagetable, (uint64)dirp64, buf, result);
+    return result;
+}

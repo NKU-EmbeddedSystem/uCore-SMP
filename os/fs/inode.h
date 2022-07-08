@@ -61,4 +61,6 @@ icreate(struct inode *dp, char *name, int type, int major, int minor);
 
 void inode_test();
 
+int igetdents(struct inode *dp, char *buf, unsigned long len);
+
 #endif // INODE_H
