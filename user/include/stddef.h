@@ -125,5 +125,8 @@ struct linux_dirent64 {
 #define MAP_PRIVATE 0X02
 #define MAP_FAILED ((void *) -1)
 
+// for clone
+#define SIGCHLD   17
+
 
 #endif // __STDDEF_H__

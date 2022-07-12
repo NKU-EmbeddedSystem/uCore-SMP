@@ -64,7 +64,7 @@ void procinit();
 void scheduler(); // __attribute__((noreturn));
 void switch_to_scheduler();
 void yield();
-int fork(void);
+int clone(void* stack);
 int exec(char *name, int argc, const char **argv);
 int wait(int, int *);
 struct proc *alloc_proc();

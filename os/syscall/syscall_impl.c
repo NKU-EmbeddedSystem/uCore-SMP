@@ -96,8 +96,13 @@ pid_t sys_getppid()
     return -1;
 }
 
-pid_t sys_fork() {
-    return fork();
+// only support SIGCHLD, and other params are ignored.
+pid_t sys_clone(unsigned long flags, void *child_stack, void *ptid, void *tls, void *ctid) {
+    if (flags != SIGCHLD) {
+        infof("clone: flags must be SIGCHLD");
+        return -1;
+    }
+    return clone(child_stack);
 }
 
 /**

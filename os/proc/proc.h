@@ -13,6 +13,7 @@
 #define FD_MAX (128)
 #define PROC_NAME_MAX (16)
 #define MAX_PROC_SHARED_MEM_INSTANCE (32)   // every proc
+#define SIGCHLD (17)
 
 extern char trampoline[];
 extern char boot_stack_top[];

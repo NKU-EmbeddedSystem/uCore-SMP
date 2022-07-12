@@ -72,8 +72,8 @@ char *syscall_names(int id)
         return "SYS_brk";
     case SYS_munmap:
         return "SYS_munmap";
-    case SYS_fork:
-        return "SYS_fork";
+    case SYS_clone:
+        return "SYS_clone";
     case SYS_mmap:
         return "SYS_mmap";
     case SYS_execv:
@@ -144,8 +144,8 @@ void syscall()
     case SYS_dup3:
         ret = sys_dup3((int)args[0], (int)args[1], (int)args[2]);
         break;
-    case SYS_fork:
-        ret = sys_fork();
+    case SYS_clone:
+        ret = sys_clone((unsigned long)args[0], (void *)args[1], (void *)args[2], (void *)args[3], (void *)args[4]);
         break;
     case SYS_execv:
         ret = sys_execv((char *)args[0], (char **)args[1]);

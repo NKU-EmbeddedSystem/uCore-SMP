@@ -39,7 +39,7 @@ int sys_mkdirat(int dirfd, char *path_va, unsigned int mode);
 
 int sys_close(int fd);
 
-pid_t sys_fork(void);
+pid_t sys_clone(unsigned long flags, void *child_stack, void *ptid, void *tls, void *ctid);
 
 uint64 sys_time_ms();
 

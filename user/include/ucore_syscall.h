@@ -2,6 +2,8 @@
 #define UCORE_SYSCALL_H
 #include "stddef.h"
 
+extern int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...);
+
 int execv(const char *pathname, char *const argv[]);
 
 int exec(const char *pathname);

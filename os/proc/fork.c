@@ -6,7 +6,7 @@
  * 
  * @return int 0 or child pid, -1 on error
  */
-int fork() {
+int clone(void* stack) {
     int i, pid;
     struct proc *np;
     struct proc *p = curr_proc();
@@ -29,6 +29,11 @@ int fork() {
 
     // Cause fork to return 0 in the child.
     np->trapframe->a0 = 0;
+
+    // change sp if the given stack is not NULL.
+    if (stack != NULL) {
+        np->trapframe->sp = (uint64)stack;
+    }
 
     // increment reference counts on open file descriptors.
     for (i = 0; i < FD_MAX; i++)

@@ -82,7 +82,7 @@ int close(int fd)
 
 pid_t fork(void)
 {
-    return syscall(SYS_fork);
+    return syscall(SYS_clone, SIGCHLD, 0);
 }
 
 uint64 time_ms()
@@ -207,11 +207,11 @@ int munmap(void *start, size_t len)
 
 pid_t clone(int (*fn)(void *arg), void *arg, size_t *stack, size_t stack_size, unsigned long flags)
 {
-    return 0;
-    // if (stack)
-	// stack += stack_size;
+    if (stack)
+        stack += stack_size;
 
-    // return syscall(SYS_clone, fn, stack, flags, NULL, NULL, NULL);
+    return __clone(fn, stack, flags, NULL, NULL, NULL);
+    //return syscall(SYS_clone, fn, stack, flags, NULL, NULL, NULL);
 }
 
 int execve(const char *name, char *const argv[], char *const argp[])
