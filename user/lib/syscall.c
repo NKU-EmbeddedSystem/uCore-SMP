@@ -8,12 +8,12 @@
 
 int execv(const char *pathname, char *const argv[])
 {
-    return syscall(SYS_execve, pathname, argv);
+    return syscall(SYS_execve, pathname, argv, NULL);
 }
 
 int exec(const char *pathname)
 {
-    return syscall(SYS_execve, pathname, NULL);
+    return syscall(SYS_execve, pathname, NULL, NULL);
 }
 
 void exit(int status)
