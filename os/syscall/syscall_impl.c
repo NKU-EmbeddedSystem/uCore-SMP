@@ -279,8 +279,14 @@ int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]) {
     return exec(name, argc, argv, envc, envp);
 }
 
-pid_t sys_waitpid(pid_t pid, int *wstatus_va) {
-    return wait(pid, wstatus_va);
+// only WNOHANG is supported, WUNTRACED, WCONTINUED are not supported
+// and rusage is not supported
+pid_t sys_wait4(pid_t pid, int *wstatus_va, int options, void *rusage) {
+    if (options & ~WNOHANG || rusage != NULL) {
+        infof("sys_wait4: options=%d rusage=%d not support", options, rusage);
+        return -1;
+    }
+    return wait(pid, wstatus_va, options, rusage);
 }
 
 uint64 sys_time_ms() {

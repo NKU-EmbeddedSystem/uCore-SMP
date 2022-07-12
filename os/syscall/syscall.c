@@ -46,8 +46,8 @@ char *syscall_names(int id)
         return "SYS_fstat";
     case SYS_exit:
         return "SYS_exit";
-    case SYS_waitpid:
-        return "SYS_waitpid";
+    case SYS_wait4:
+        return "SYS_wait4";
     case SYS_sched_yield:
         return "SYS_sched_yield";
     case SYS_kill:
@@ -150,8 +150,8 @@ void syscall()
     case SYS_execve:
         ret = sys_execve((char *)args[0], (char **)args[1], (char **)args[2]);
         break;
-    case SYS_waitpid:
-        ret = sys_waitpid(args[0], (int *)args[1]);
+    case SYS_wait4:
+        ret = sys_wait4((int)args[0], (int *)args[1], (int)args[2], (void *)args[3]);
         break;
     case SYS_time_ms:
         ret = sys_time_ms();

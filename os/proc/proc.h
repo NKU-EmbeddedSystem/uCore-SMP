@@ -15,6 +15,11 @@
 #define MAX_PROC_SHARED_MEM_INSTANCE (32)   // every proc
 #define SIGCHLD (17)
 
+// for wait()
+#define WNOHANG		0x00000001
+#define WUNTRACED	0x00000002
+#define WCONTINUED	0x00000008
+
 extern char trampoline[];
 extern char boot_stack_top[];
 extern char boot_stack[];

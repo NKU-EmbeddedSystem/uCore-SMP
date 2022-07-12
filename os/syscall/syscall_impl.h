@@ -31,7 +31,7 @@ int sys_dup(int oldfd);
 
 int sys_sched_yield(void);
 
-pid_t sys_waitpid(pid_t pid, int *wstatus_va);
+pid_t sys_wait4(pid_t pid, int *wstatus_va, int options, void *rusage);
 
 //int sys_mkdir(char *pathname_va);
 

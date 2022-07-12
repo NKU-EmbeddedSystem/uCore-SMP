@@ -2,7 +2,7 @@
 /**
  * wait for child process with pid to exit
  */
-int wait(int pid, int *wstatus_va)
+int wait(int pid, int *wstatus_va, int options, void* rusage)
 {
     struct proc *p = curr_proc();
     struct proc *maybe_child;
@@ -28,6 +28,9 @@ int wait(int pid, int *wstatus_va)
                         // Found one.
                         int child_pid = maybe_child->pid;
                         int wstatus = maybe_child->exit_code;
+                        // construct the wait status
+                        // see WEXITSTATUS
+                        wstatus = (wstatus & 0xff) << 8;
                         if (wstatus_va && copyout(p->pagetable, (uint64)wstatus_va, (char *)&wstatus,  sizeof(wstatus)) < 0)
                         {
                             release(&maybe_child->lock);
@@ -50,6 +53,13 @@ int wait(int pid, int *wstatus_va)
             return -1;
         }
 
+        // No child has exited.
+        // if WNOHANG is set, return 0 immediately.
+        if (options & WNOHANG)
+        {
+            release(&wait_lock);
+            return 0;
+        }
         // Wait for a child to exit.
         sleep(p, &wait_lock); 
     }

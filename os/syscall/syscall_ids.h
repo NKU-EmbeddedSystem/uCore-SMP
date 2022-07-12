@@ -17,7 +17,7 @@
 #define SYS_write 64
 #define SYS_fstat 80
 #define SYS_exit 93
-#define SYS_waitpid 95
+#define SYS_wait4 260
 #define SYS_sched_yield 124
 #define SYS_kill 129
 #define SYS_setpriority 140

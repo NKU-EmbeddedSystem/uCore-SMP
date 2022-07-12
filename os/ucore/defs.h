@@ -66,7 +66,7 @@ void switch_to_scheduler();
 void yield();
 int clone(void* stack);
 int exec(char *name, int argc, const char **argv, int envc, const char **envp);
-int wait(int, int *);
+int wait(int, int *, int, void*);
 struct proc *alloc_proc();
 void init_scheduler();
 int fdalloc(struct file *);

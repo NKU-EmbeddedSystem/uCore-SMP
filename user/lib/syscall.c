@@ -61,7 +61,7 @@ int sched_yield(void)
 
 pid_t waitpid(pid_t pid, int *wstatus,int n) //temporary
 {
-    return syscall(SYS_waitpid, pid, wstatus);
+    return syscall(SYS_wait4, pid, wstatus, n, 0);
 }
 
 pid_t wait(int *wstatus)
