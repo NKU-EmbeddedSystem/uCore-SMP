@@ -8,12 +8,12 @@
 
 int execv(const char *pathname, char *const argv[])
 {
-    return syscall(SYS_execv, pathname, argv);
+    return syscall(SYS_execve, pathname, argv);
 }
 
 int exec(const char *pathname)
 {
-    return syscall(SYS_execv, pathname, NULL);
+    return syscall(SYS_execve, pathname, NULL);
 }
 
 void exit(int status)
@@ -216,8 +216,7 @@ pid_t clone(int (*fn)(void *arg), void *arg, size_t *stack, size_t stack_size, u
 
 int execve(const char *name, char *const argv[], char *const argp[])
 {
-    return 0;
-    // return syscall(SYS_execve, name, argv, argp);
+     return syscall(SYS_execve, name, argv, argp);
 }
 
 int times(void *mytimes)

@@ -229,44 +229,54 @@ int sys_mknod(char *path_va, short major, short minor) {
     return 0;
 }
 
-int sys_execv( char *pathname_va, char * argv_va[]) {
+static int arg_copy(struct proc* p, char *arg_va[], char *arg[], char arg_str[][MAX_EXEC_ARG_LENGTH]) {
+    int argc = 0;
+
+    while (argc < MAX_EXEC_ARG_COUNT)
+    {
+        char* arg_i;   // the argv[i]
+        if (copyin(p->pagetable, (char*)&arg_i, (uint64) &arg_va[argc], sizeof(char*))<0){
+            return -1;
+        }
+
+        if (arg_i == NULL){
+            // no more arg
+            break;
+        }
+
+        // copy *arg[i] (the string)
+        if (copyinstr(p->pagetable, arg_str[argc], (uint64)arg_i, MAX_EXEC_ARG_LENGTH) < 0) {
+            return -1;
+        }
+
+        arg[argc] = arg_str[argc];    // point at the copied string
+        argc++;
+    }
+    return argc;
+}
+
+int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]) {
     struct proc *p = curr_proc();
     char name[MAXPATH];
     char argv_str[MAX_EXEC_ARG_COUNT][MAX_EXEC_ARG_LENGTH];
+    char envp_str[MAX_EXEC_ARG_COUNT][MAX_EXEC_ARG_LENGTH];
     copyinstr(p->pagetable, name, (uint64)pathname_va, MAXPATH);
     infof("sys_exec %s", name);
 
     int argc = 0;
+    int envc = 0;
     const char *argv[MAX_EXEC_ARG_COUNT];
+    const char *envp[MAX_EXEC_ARG_COUNT];
     // tracecore("argv_va=%d argc=%d", argv_va, argc);
     if (argv_va == NULL) {
         // nothing
     } else {
-
-        while (argc < MAX_EXEC_ARG_COUNT)
-        {
-            char* argv_i;   // the argv[i]
-            if (copyin(p->pagetable, (char*)&argv_i, (uint64) &argv_va[argc], sizeof(char*))<0){
-                return -1;
-            }
-
-            if (argv_i == NULL){
-                // no more argv
-                break;
-            }
-
-            // copy *argv[i] (the string)
-            if (copyinstr(p->pagetable,argv_str[argc], (uint64)argv_i, MAX_EXEC_ARG_LENGTH) < 0) {
-                return -1;
-            }
-
-            argv[argc] = argv_str[argc];    // point at the copied string
-            argc++;
-        }
+        argc = arg_copy(p, argv_va, argv, argv_str);
+        envc = arg_copy(p, envp_va, envp, envp_str);
     }
     tracecore("argv_va=%d argc=%d", argv_va, argc);
 
-    return exec(name, argc, argv);
+    return exec(name, argc, argv, envc, envp);
 }
 
 pid_t sys_waitpid(pid_t pid, int *wstatus_va) {

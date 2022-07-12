@@ -76,8 +76,8 @@ char *syscall_names(int id)
         return "SYS_clone";
     case SYS_mmap:
         return "SYS_mmap";
-    case SYS_execv:
-        return "SYS_execv";
+    case SYS_execve:
+        return "SYS_execve";
     case SYS_spawn:
         return "SYS_spawn";
     case SYS_mailread:
@@ -147,8 +147,8 @@ void syscall()
     case SYS_clone:
         ret = sys_clone((unsigned long)args[0], (void *)args[1], (void *)args[2], (void *)args[3], (void *)args[4]);
         break;
-    case SYS_execv:
-        ret = sys_execv((char *)args[0], (char **)args[1]);
+    case SYS_execve:
+        ret = sys_execve((char *)args[0], (char **)args[1], (char **)args[2]);
         break;
     case SYS_waitpid:
         ret = sys_waitpid(args[0], (int *)args[1]);
@@ -190,7 +190,7 @@ void syscall()
         ret = -1;
         warnf("unknown syscall %d", (int)id);
     }
-    if(id != SYS_execv)
+    if(id != SYS_execve)
         trapframe->a0 = ret; // return value
     if (id != SYS_write && id != SYS_read)
     {

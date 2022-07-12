@@ -32,7 +32,7 @@
 #define SYS_munmap 215
 #define SYS_clone 220
 #define SYS_mmap 222
-#define SYS_execv 281
+#define SYS_execve 221
 #define SYS_sharedmem 282
 #define SYS_spawn 400
 #define SYS_mailread 401

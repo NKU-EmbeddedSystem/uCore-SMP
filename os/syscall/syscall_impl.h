@@ -9,7 +9,7 @@ struct linux_dirent64;
 
 struct kstat;
 
-int sys_execv( char *pathname_va, char * argv_va[]);
+int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
 

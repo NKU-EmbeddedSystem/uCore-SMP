@@ -13,7 +13,7 @@ static char* round_down_8 (char* p){
     return (char*)(((uint64)p) & (~0x7ULL));
 }
 
-int exec(char *name, int argc, const char **argv) {
+int exec(char *name, int argc, const char **argv, int envc, const char **envp) {
     debug_print_args(name, argc, argv);
     
     int id = get_app_id_by_name(name);
@@ -42,10 +42,12 @@ int exec(char *name, int argc, const char **argv) {
 
     // the argv array (content of argv[i]) will be stored on ustack, at the very bottom
     // and the real string value of argv array (content of *argv[i]) will be stored after that
-    sp_pa -= argc * sizeof(const char *);           // alloc space for argv
+    sp_pa -= (argc + envc + 1) * sizeof(const char *);           // alloc space for argv and envp, the last ptr is NULL
     sp_pa = round_down_8(sp_pa); // round down to multiple of 4
     const char **argv_start = (const char **)sp_pa; // user main()'s argv value (physical here)
+    const char **envp_start = (const char **)sp_pa + argc;
 
+    // copy argv to user stack
     for (int i = 0; i < argc; i++) {
         int arg_len = strlen(argv[i]);
         sp_pa -= arg_len + 1; // alloc space for argv[i] string, including a null
@@ -55,13 +57,26 @@ int exec(char *name, int argc, const char **argv) {
         argv_start[i] = (sp_pa - sp_pa_bottom) + sp; // point argv[i] to here, use user space
     }
 
+    // copy envp to user stack
+    for (int i = 0; i < envc; i++) {
+        int arg_len = strlen(envp[i]);
+        sp_pa -= arg_len + 1; // alloc space for envp[i] string, including a null
+        sp_pa = round_down_8(sp_pa); // round down to multiple of 4
+        strncpy(sp_pa, envp[i], arg_len);
+        sp_pa[arg_len] = '\0';                       // make sure null is there
+        envp_start[i] = (sp_pa - sp_pa_bottom) + sp; // point envp[i] to here, use user space
+    }
+    envp_start[envc] = NULL; // the last ptr is NULL
+
     p->trapframe->sp += sp_pa - sp_pa_bottom; // update user sp
     p->trapframe->sp = (uint64)round_down_8((char*)(p->trapframe->sp)); // round down to multiple of 4
 
     p->trapframe->a0 = (uint64)argc;
 
-    int64 offset = (uint64)argv_start - (uint64)sp_pa_bottom; // offset of argv in user stack
-    p->trapframe->a1 = (uint64)(sp + offset);
+    int64 argv_offset = (uint64)argv_start - (uint64)sp_pa_bottom; // offset of argv in user stack
+    int64 envp_offset = (uint64)envp_start - (uint64)sp_pa_bottom; // offset of envp in user stack
+    p->trapframe->a1 = (uint64)(sp + argv_offset);
+    p->trapframe->a2 = (uint64)(sp + envp_offset);
 
     // tracecore("trapframe->sp=%p", p->trapframe->sp);
     // tracecore("trapframe->a0=%p", p->trapframe->a0);
