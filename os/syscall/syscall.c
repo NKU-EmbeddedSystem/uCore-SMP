@@ -161,6 +161,9 @@ void syscall()
     case SYS_uname:
         ret = sys_uname((struct utsname *)args[0]);
         break;
+    case SYS_gettimeofday:
+        ret = sys_gettimeofday((struct timeval *)args[0], (struct timezone *)args[1]);
+        break;
     case SYS_mknod:
         ret = sys_mknod((char *)args[0], args[1], args[2]);
         break;

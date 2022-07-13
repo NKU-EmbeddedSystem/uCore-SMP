@@ -727,3 +727,29 @@ int sys_uname(struct utsname *utsname_va) {
     }
     return 0;
 }
+
+int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va) {
+    if (tv_va == NULL && tz_va == NULL) {
+        infof("sys_gettimeofday: tv_va and tz_va are both NULL");
+        return -1;
+    }
+
+    struct timeval tv;
+    struct timezone tz;
+
+    uint64 timeus = get_time_us();
+    tv.tv_sec = timeus / USEC_PER_SEC;
+    tv.tv_usec = timeus % USEC_PER_SEC;
+    memset(&tz, 0, sizeof(tz));
+
+    struct proc *p = curr_proc();
+    if (tv_va && copyout(p->pagetable, (uint64)tv_va, (char*)&tv, sizeof(struct timeval)) != 0) {
+        infof("sys_gettimeofday: copyout failed");
+        return -1;
+    }
+    if (tz_va && copyout(p->pagetable, (uint64)tz_va, (char*)&tz, sizeof(struct timezone)) != 0) {
+        infof("sys_gettimeofday: copyout failed");
+        return -1;
+    }
+    return 0;
+}

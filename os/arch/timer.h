@@ -18,6 +18,16 @@
 #define MS_TO_CYCLE(ms) ((ms) * (CYCLE_FREQ / MSEC_PER_SEC))
 #define SECOND_TO_CYCLE(sec) ((sec)*CYCLE_FREQ)
 
+struct timeval {
+    uint64 tv_sec;
+    uint64 tv_usec;
+};
+
+struct timezone {
+    int tz_minuteswest;
+    int tz_dsttime;
+};
+
 uint64 get_time_ms();
 uint64 get_time_us();
 uint64 get_tick();

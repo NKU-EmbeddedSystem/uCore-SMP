@@ -224,14 +224,23 @@ int times(void *mytimes)
     return syscall(SYS_times, mytimes);
 }
 
+int sys_get_time(TimeVal *ts, int tz)
+{
+    return syscall(SYS_gettimeofday, ts, tz);
+}
+
 int64 get_time()
 {
-    return 0;
-    // int  t=time_ms();
-    // if(t>0){
-    //     return t/ (TICK_FREQ / MSEC_PER_SEC);
-    // }
-    // return -1;
+    TimeVal time;
+    int err = sys_get_time(&time, 0);
+    if (err == 0)
+    {
+        return ((time.sec & 0xffff) * 1000 + time.usec / 1000);
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 int uname(void *buf)

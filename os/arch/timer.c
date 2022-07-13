@@ -31,7 +31,7 @@ uint64 get_time_ms() {
 }
 
 uint64 get_time_us() {
-    return r_time() * USEC_PER_SEC / TICK_FREQ;
+    return r_time() / (TICK_FREQ / USEC_PER_SEC);
 }
 
 uint64 get_tick() {

@@ -13,6 +13,10 @@ struct tms;
 
 struct utsname;
 
+struct timeval;
+
+struct timezone;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -72,5 +76,7 @@ int sys_dup3(int oldfd, int newfd, int flags);
 int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len);
 
 int sys_uname(struct utsname *utsname_va);
+
+int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va);
 
 #endif // SYSCALL_IMPL_H
