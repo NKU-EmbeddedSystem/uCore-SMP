@@ -67,6 +67,15 @@ struct proc {
     void* next_shmem_addr;
     char name[PROC_NAME_MAX]; // Process name (debugging)
 };
+
+// process CPU time
+struct tms {
+    long tms_utime;
+    long tms_stime;
+    long tms_cutime;
+    long tms_cstime;
+};
+
 struct proc *findproc(int pid);
 
 struct proc *curr_proc();
@@ -87,4 +96,5 @@ struct proc *alloc_proc(void);
 struct file *get_proc_file_by_fd(struct proc *p, int fd);
 pagetable_t proc_pagetable(struct proc *p);
 void freeproc(struct proc *p);
+int get_cpu_time(struct proc *p, struct tms *tms);
 #endif // PROC_H

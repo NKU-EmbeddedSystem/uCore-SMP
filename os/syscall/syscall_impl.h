@@ -9,6 +9,8 @@ struct linux_dirent64;
 
 struct kstat;
 
+struct tms;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -41,7 +43,7 @@ int sys_close(int fd);
 
 pid_t sys_clone(unsigned long flags, void *child_stack, void *ptid, void *tls, void *ctid);
 
-uint64 sys_time_ms();
+uint64 sys_times(struct tms *tms_va);
 
 int sys_sleep(unsigned long long time_in_ms);
 

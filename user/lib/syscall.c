@@ -221,10 +221,7 @@ int execve(const char *name, char *const argv[], char *const argp[])
 
 int times(void *mytimes)
 {
-    return 0;
-    // struct tms* tm=(struct tms*)mytimes;
-	// uint64 t=syscall(SYS_times, mytimes);
-    // return t;
+    return syscall(SYS_times, mytimes);
 }
 
 int64 get_time()

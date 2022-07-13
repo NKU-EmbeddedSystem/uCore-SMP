@@ -459,3 +459,40 @@ struct file *get_proc_file_by_fd(struct proc *p, int fd) {
 
     return p->files[fd];
 }
+
+// get the given process and its child processes running time in ticks
+// include kernel time and user time
+int get_cpu_time(struct proc *p, struct tms *tms) {
+    if (p == NULL) {
+        infof("get_cpu_time: p is NULL");
+        return -1;
+    }
+    if (tms == NULL) {
+        infof("get_cpu_time: tms is NULL");
+        return -1;
+    }
+
+    tms->tms_utime = p->user_time;
+    tms->tms_stime = p->kernel_time;
+    tms->tms_cutime = 0;
+    tms->tms_cstime = 0;
+
+    acquire(&pool_lock);
+    struct proc *child;
+    for (child = pool; child < &pool[NPROC]; child++)
+    {
+        if (child != p) // avoid deadlock
+        {
+            if (child->state != UNUSED && child->parent == p)
+            {
+                // found a child
+                acquire(&child->lock);
+                tms->tms_utime += child->user_time;
+                tms->tms_stime += child->kernel_time;
+                release(&child->lock);
+            }
+        }
+    }
+    release(&pool_lock);
+    return 0;
+}

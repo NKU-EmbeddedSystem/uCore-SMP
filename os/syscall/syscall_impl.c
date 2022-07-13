@@ -289,9 +289,22 @@ pid_t sys_wait4(pid_t pid, int *wstatus_va, int options, void *rusage) {
     return wait(pid, wstatus_va, options, rusage);
 }
 
-uint64 sys_time_ms() {
+uint64 sys_times(struct tms *tms_va) {
     // printf("core %d %d  time=%p\n",cpuid(), intr_get(),(r_sie() & SIE_STIE));
-    return get_time_ms();
+    struct tms tms;
+    struct proc *p = curr_proc();
+    acquire(&p->lock);
+    if (get_cpu_time(p, &tms) < 0) {
+        release(&p->lock);
+        infof("sys_times: get_cpu_time failed");
+        return -1;
+    }
+    release(&p->lock);
+    if (copyout(p->pagetable, (uint64)tms_va, (char *)&tms, sizeof(struct tms)) < 0) {
+        infof("sys_times: copyout failed");
+        return -1;
+    }
+    return get_tick();
 }
 
 /**
