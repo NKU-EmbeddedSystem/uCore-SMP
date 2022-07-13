@@ -58,6 +58,8 @@ char *syscall_names(int id)
         return "SYS_getpriority";
     case SYS_times:
         return "SYS_times";
+    case SYS_uname:
+        return "SYS_uname";
     case SYS_gettimeofday:
         return "SYS_gettimeofday";
     case SYS_settimeofday:
@@ -155,6 +157,9 @@ void syscall()
         break;
     case SYS_times:
         ret = sys_times((struct tms *)args[0]);
+        break;
+    case SYS_uname:
+        ret = sys_uname((struct utsname *)args[0]);
         break;
     case SYS_mknod:
         ret = sys_mknod((char *)args[0], args[1], args[2]);

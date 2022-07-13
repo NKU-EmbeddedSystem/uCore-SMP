@@ -710,3 +710,20 @@ int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len) {
     copyout(p->pagetable, (uint64)dirp64, buf, result);
     return result;
 }
+
+int sys_uname(struct utsname *utsname_va) {
+    struct utsname utsname;
+    struct proc *p = curr_proc();
+    strcpy(utsname.sysname, "uCore-SMP");
+    strcpy(utsname.nodename, "uCore-SMP");
+    strcpy(utsname.release, "0.1");
+    strcpy(utsname.version, "0.1");
+    strcpy(utsname.machine, "riscv64");
+    strcpy(utsname.domainname, "Metaverse");
+
+    if (copyout(p->pagetable, (uint64)utsname_va, (char*)&utsname, sizeof(utsname)) != 0) {
+        infof("sys_uname: copyout failed");
+        return -1;
+    }
+    return 0;
+}

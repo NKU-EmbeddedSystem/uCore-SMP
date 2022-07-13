@@ -11,6 +11,8 @@ struct kstat;
 
 struct tms;
 
+struct utsname;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -68,5 +70,7 @@ char * sys_getcwd(char *buf, size_t size);
 int sys_dup3(int oldfd, int newfd, int flags);
 
 int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len);
+
+int sys_uname(struct utsname *utsname_va);
 
 #endif // SYSCALL_IMPL_H

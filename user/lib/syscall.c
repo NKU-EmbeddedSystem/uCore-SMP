@@ -236,6 +236,5 @@ int64 get_time()
 
 int uname(void *buf)
 {
-    return 0;
-    // return syscall(SYS_uname, buf);
+    return syscall(SYS_uname, buf);
 }

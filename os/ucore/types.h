@@ -45,4 +45,13 @@ typedef int pid_t;// 512 PTEs
         (*(volatile uint64 *)(addr)) = (v); \
     }
 
+struct utsname {
+    char sysname[65];
+    char nodename[65];
+    char release[65];
+    char version[65];
+    char machine[65];
+    char domainname[65];
+};
+
 #endif // TYPES_H
