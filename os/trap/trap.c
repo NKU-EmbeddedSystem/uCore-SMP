@@ -150,6 +150,14 @@ void usertrap() {
 
     KERNEL_ASSERT((sstatus & SSTATUS_SPP) == 0, "usertrap: not from user mode");
 
+    // record user time
+    struct proc* p = curr_proc();
+    uint64 curr_time = get_time_us();
+    acquire(&p->lock);
+    p->user_time += curr_time - p->last_start_time;
+    p->last_start_time = curr_time;
+    release(&p->lock);
+
     if (scause & (1ULL << 63)) { // interrput = 1
         user_interrupt_handler(scause, stval, sepc);
     } else { // interrput = 0

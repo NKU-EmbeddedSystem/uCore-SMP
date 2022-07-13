@@ -105,6 +105,8 @@ int either_copyin(void *dst, void *src, size_t len, int is_user_src);
 void timerinit();
 void set_next_timer();
 uint64 get_time_ms();
+uint64 get_time_us();
+uint64 get_tick();
 // pipe.c
 int pipealloc(struct file **f0, struct file **f1);
 void pipeclose(struct pipe *, int);

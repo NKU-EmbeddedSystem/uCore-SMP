@@ -157,7 +157,8 @@ void freeproc(struct proc *p) {
     memset(&p->context, 0, sizeof(p->context));
     p->stride = 0;
     p->priority = 0;
-    p->cpu_time = 0;
+    p->kernel_time = 0;
+    p->user_time = 0;
     p->last_start_time = 0;
     for (int i = 0; i < FD_MAX; i++)
     {
@@ -224,7 +225,8 @@ found:
 
     p->stride = 0;
     p->priority = 16;
-    p->cpu_time = 0;
+    p->user_time = 0;
+    p->kernel_time = 0;
     p->last_start_time = 0;
     for (int i = 0; i < FD_MAX; i++) {
         p->files[i] = NULL;
@@ -341,7 +343,8 @@ void print_proc(struct proc *proc) {
     printf_k("* heap_sz:            %p\n", proc->heap_sz);
     printf_k("* stride:             %p\n", proc->stride);
     printf_k("* priority:           %p\n", proc->priority);
-    printf_k("* cpu_time:           %p\n", proc->cpu_time);
+    printf_k("* kernel_time:        %p\n", proc->kernel_time);
+    printf_k("* user_time:          %p\n", proc->user_time);
     printf_k("* last_time:          %p\n", proc->last_start_time);
     printf_k("* files:              \n");
     for (int i = 0; i < FD_MAX; i++) {

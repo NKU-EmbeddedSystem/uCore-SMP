@@ -51,7 +51,7 @@ int64 proc_read(char *dst, int64 len, int to_user)
             }
             stat_buf[cnt].heap_sz = p->heap_sz;
             stat_buf[cnt].total_size = p->total_size;
-            stat_buf[cnt].cpu_time = p->cpu_time;
+            stat_buf[cnt].cpu_time = p->kernel_time + p->user_time;
             stat_buf[cnt].state = p->state;
 
             release(&p->lock);

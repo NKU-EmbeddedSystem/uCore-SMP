@@ -57,8 +57,9 @@ struct proc {
     uint64 heap_sz;
     uint64 stride;
     uint64 priority;
-    uint64 cpu_time;            // ms, user and kernel
-    uint64 last_start_time;     // ms
+    uint64 user_time;           // us, user only
+    uint64 kernel_time;         // us, kernel only
+    uint64 last_start_time;     // us
     struct file *files[FD_MAX]; // Opened files
     struct inode *cwd;          // Current directory
     struct shared_mem * shmem[MAX_PROC_SHARED_MEM_INSTANCE];

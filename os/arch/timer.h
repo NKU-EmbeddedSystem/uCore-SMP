@@ -20,6 +20,7 @@
 
 uint64 get_time_ms();
 uint64 get_time_us();
+uint64 get_tick();
 
 void start_timer_interrupt();
 
