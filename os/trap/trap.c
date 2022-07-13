@@ -152,7 +152,7 @@ void usertrap() {
 
     // record user time
     struct proc* p = curr_proc();
-    uint64 curr_time = get_time_us();
+    uint64 curr_time = get_tick();
     acquire(&p->lock);
     p->user_time += curr_time - p->last_start_time;
     p->last_start_time = curr_time;

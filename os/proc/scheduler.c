@@ -54,7 +54,7 @@ void scheduler(void)
             start_timer_interrupt();
 
             uint64 busy_start = r_cycle();
-            next_proc->last_start_time = get_time_us();
+            next_proc->last_start_time = get_tick();
             uint64 pass = BIGSTRIDE / (next_proc->priority);
             next_proc->stride += pass;
             pushtrace(0x3011);
@@ -63,7 +63,7 @@ void scheduler(void)
             swtch(&mycpu()->context, &next_proc->context);
 
             busy += r_cycle() - busy_start;
-            uint64 time_delta = get_time_us() - next_proc->last_start_time;
+            uint64 time_delta = get_tick() - next_proc->last_start_time;
             next_proc->kernel_time += time_delta;
             pushtrace(0x3007);
 
