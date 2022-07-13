@@ -759,3 +759,56 @@ int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va) {
     }
     return 0;
 }
+
+int sys_nanosleep(struct timeval *req_va, struct timeval *rem_va) {
+    if (req_va == NULL) {
+        infof("sys_nanosleep: req_va is NULL");
+        return -1;
+    }
+    struct timeval req;
+    struct timeval rem;
+    struct proc *p = curr_proc();
+    if (copyin(p->pagetable, (char*)&req, (uint64)req_va, sizeof(struct timeval)) != 0) {
+        infof("sys_nanosleep: copyin failed");
+        return -1;
+    }
+
+    uint64 timeus = get_time_us();
+    uint64 expires = req.tv_sec * USEC_PER_SEC + req.tv_usec;
+
+    // already expired
+    if (timeus + expires > get_time_us()) {
+        return 0;
+    }
+
+    struct timer *timer = add_timer(expires);
+    if (timer == NULL) {
+        infof("sys_nanosleep: timer is full, cannot add timer");
+        goto err_rem;
+    }
+    // guard lock is acquired by add_timer
+    sleep(timer, &timer->guard_lock);
+
+    release(&timer->guard_lock);
+    del_timer(timer);
+
+    uint64 duration = get_time_us() - timeus;
+    uint64 remain = 0;
+    if (duration < expires)  {
+        remain = expires - duration;
+        goto err_rem;
+    }
+    return 0;
+
+
+err_rem:
+    if (rem_va) {
+        rem.tv_sec = remain / USEC_PER_SEC;
+        rem.tv_usec = remain % USEC_PER_SEC;
+        if (copyout(p->pagetable, (uint64)rem_va, (char*)&rem, sizeof(struct timeval)) != 0) {
+            infof("sys_nanosleep: copyout failed");
+            return -1;
+        }
+    }
+    return -1;
+}

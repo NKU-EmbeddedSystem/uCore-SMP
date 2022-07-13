@@ -107,6 +107,10 @@ void set_next_timer();
 uint64 get_time_ms();
 uint64 get_time_us();
 uint64 get_tick();
+struct timer *add_timer(uint64 expires_us);
+int del_timer(struct timer *timer);
+void try_wakeup_timer();
+uint64 get_min_wakeup_tick();
 // pipe.c
 int pipealloc(struct file **f0, struct file **f1);
 void pipeclose(struct pipe *, int);

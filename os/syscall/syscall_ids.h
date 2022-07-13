@@ -24,6 +24,7 @@
 #define SYS_getpriority 141
 #define SYS_times 153
 #define SYS_uname 160
+#define SYS_nanosleep 101
 #define SYS_gettimeofday 169
 #define SYS_settimeofday 170
 #define SYS_getpid 172

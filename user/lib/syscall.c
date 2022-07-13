@@ -85,18 +85,10 @@ pid_t fork(void)
     return syscall(SYS_clone, SIGCHLD, 0);
 }
 
-uint64 time_ms()
+int sleep(unsigned long long time)
 {
-    return syscall(SYS_time_ms);
-}
-
-int sleep(unsigned long long time_in_ms)
-{
-    unsigned long long s = time_ms();
-    while (time_ms() < s + time_in_ms)
-    {
-        sched_yield();
-    }
+    TimeVal tv = {.sec = time, .usec = 0};
+    if (syscall(SYS_nanosleep, &tv, &tv)) return tv.sec;
     return 0;
 }
 

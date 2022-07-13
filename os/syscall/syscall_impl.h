@@ -79,4 +79,6 @@ int sys_uname(struct utsname *utsname_va);
 
 int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va);
 
+int sys_nanosleep(struct timeval *req_va, struct timeval *rem_va);
+
 #endif // SYSCALL_IMPL_H

@@ -32,6 +32,7 @@ void kernel_interrupt_handler(uint64 scause, uint64 stval, uint64 sepc) {
     int irq;
     switch (cause) {
     case SupervisorTimer:
+        try_wakeup_timer();
         set_next_timer();
         yield();
         break;
@@ -57,6 +58,7 @@ void user_interrupt_handler(uint64 scause, uint64 stval, uint64 sepc) {
     int irq;
     switch (scause & 0xff) {
     case SupervisorTimer:
+        try_wakeup_timer();
         set_next_timer();
         yield();
         break;

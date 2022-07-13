@@ -88,6 +88,8 @@ char *syscall_names(int id)
         return "SYS_mailwrite";
     case SYS_sharedmem:
         return "SYS_sharedmem";
+    case SYS_nanosleep:
+        return "SYS_nanosleep";
     default:
         return "?";
     }
@@ -193,6 +195,9 @@ void syscall()
         break;
     case SYS_getdents64:
         ret = sys_getdents((int)args[0], (void *)args[1], args[2]);
+        break;
+    case SYS_nanosleep:
+        ret = sys_nanosleep((struct timeval *)args[0], (struct timeval *)args[1]);
         break;
     default:
         ret = -1;
