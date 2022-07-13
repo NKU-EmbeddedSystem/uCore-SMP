@@ -291,6 +291,12 @@ pid_t sys_wait4(pid_t pid, int *wstatus_va, int options, void *rusage) {
 
 uint64 sys_times(struct tms *tms_va) {
     // printf("core %d %d  time=%p\n",cpuid(), intr_get(),(r_sie() & SIE_STIE));
+
+    // needn't to get CPU time if the given tms address is NULL
+    if (tms_va == NULL) {
+        return get_tick();
+    }
+
     struct tms tms;
     struct proc *p = curr_proc();
     acquire(&p->lock);
