@@ -94,7 +94,7 @@ DRESULT disk_read (
 #else
     for(int i = 0;i<count;i++) {
         struct buf *b;
-        b = acquire_buf_and_read(ROOTDEV,sector + i * 512);
+        b = acquire_buf_and_read(ROOTDEV,sector + i);
         memmove((void*)((size_t)buff+i * 512), b->data, 512);
         release_buf(b);
     }
@@ -133,7 +133,7 @@ DRESULT disk_write (
 #else
     for(int i = 0;i<count;i++) {
         struct buf *b;
-        b = acquire_buf_and_read(ROOTDEV,sector + i * 512);
+        b = acquire_buf_and_read(ROOTDEV,sector + i);
         memmove(b->data, (void*)((size_t)buff+i * 512), 512);
         write_buf_to_disk(b);
         release_buf(b);
