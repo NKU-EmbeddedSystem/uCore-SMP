@@ -123,6 +123,8 @@ void proc_free_mem_and_pagetable(struct proc* p) {
     free_user_mem_and_pagetables(p->pagetable, p->total_size);
     p->pagetable = NULL;
     p->total_size = 0;
+    p->heap_start = 0;
+    p->heap_sz = 0;
 }
 
 
@@ -146,6 +148,7 @@ void freeproc(struct proc *p) {
     KERNEL_ASSERT(p->heap_sz == 0, "heap not freed");
 
 
+    p->heap_start = 0;
     p->state = UNUSED;  // very important
     p->pid = 0;
     p->killed = FALSE;
@@ -203,6 +206,7 @@ found:
     p->pid = alloc_pid();
     p->state = USED;
     p->total_size = 0;
+    p->heap_start = 0;
     p->heap_sz = 0;
     p->killed = FALSE;
     p->waiting_target = NULL;

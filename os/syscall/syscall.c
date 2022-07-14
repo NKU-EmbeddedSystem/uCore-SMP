@@ -199,6 +199,9 @@ void syscall()
     case SYS_nanosleep:
         ret = sys_nanosleep((struct timeval *)args[0], (struct timeval *)args[1]);
         break;
+    case SYS_brk:
+        ret = sys_brk((void *)args[0]);
+        break;
     default:
         ret = -1;
         warnf("unknown syscall %d", (int)id);

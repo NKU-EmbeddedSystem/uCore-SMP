@@ -69,6 +69,7 @@ void bin_loader(uint64 start, uint64 end, struct proc *p)
     alloc_ustack(p);
     p->next_shmem_addr = (void*) p->ustack_bottom+PGSIZE;
     p->total_size = USTACK_SIZE + length;
+    p->heap_start = USER_TEXT_START + length;
 }
 
 void loader(int id, struct proc *p) {

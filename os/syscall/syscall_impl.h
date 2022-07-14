@@ -81,4 +81,6 @@ int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va);
 
 int sys_nanosleep(struct timeval *req_va, struct timeval *rem_va);
 
+int sys_brk(void* addr);
+
 #endif // SYSCALL_IMPL_H

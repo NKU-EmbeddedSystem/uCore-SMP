@@ -54,6 +54,7 @@ struct proc {
     struct trapframe *trapframe; // data page for trampoline.S, physical address
     struct context context;      // swtch() here to run process
     uint64 total_size;           // total memory used by this process
+    uint64 heap_start;           // start of heap
     uint64 heap_sz;
     uint64 stride;
     uint64 priority;

@@ -366,9 +366,6 @@ void free_user_mem_and_pagetables(pagetable_t pagetable, uint64 total_size)
     // free bin
     debugcore("free_user_mem_and_pagetables free bin");
     uvmunmap(pagetable, USER_TEXT_START, PGROUNDUP(total_size) / PGSIZE, TRUE);
-    total_size -= PGROUNDUP(total_size);
-
-    KERNEL_ASSERT(total_size==0, "");
 
     // free page-table pages
     free_pagetable_pages(pagetable);

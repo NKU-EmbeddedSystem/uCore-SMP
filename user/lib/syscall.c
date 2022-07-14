@@ -181,8 +181,7 @@ int openat(int dirfd,const char *path, int flags)
 
 int brk(void *addr)
 {
-    return 0;
-    // return syscall(SYS_brk, addr);
+    return syscall(SYS_brk, addr);
 }
 
 void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t off)
