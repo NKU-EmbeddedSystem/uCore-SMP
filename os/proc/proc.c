@@ -487,8 +487,8 @@ int get_cpu_time(struct proc *p, struct tms *tms) {
             {
                 // found a child
                 acquire(&child->lock);
-                tms->tms_utime += child->user_time;
-                tms->tms_stime += child->kernel_time;
+                tms->tms_cutime += child->user_time;
+                tms->tms_cstime += child->kernel_time;
                 release(&child->lock);
             }
         }
