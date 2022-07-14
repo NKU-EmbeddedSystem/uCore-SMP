@@ -3,6 +3,7 @@
 #include <proc/proc.h>
 #include <trap/trap.h>
 #include <ucore/ucore.h>
+#include <fs/fs.h>
 static int app_cur, app_num;
 static uint64 *app_info_ptr;
 extern char _app_num[], _app_names[];
@@ -10,6 +11,50 @@ extern char _app_num[], _app_names[];
 #define APP_NAME_MAX 100
 #define APP_MAX_CNT 50
 char names[APP_MAX_CNT][APP_NAME_MAX];
+
+// Format of an ELF executable file
+
+#define ELF_MAGIC 0x464C457FU  // "\x7FELF" in little endian
+
+// File header
+struct elfhdr {
+    uint magic;  // must equal ELF_MAGIC
+    uchar elf[12];
+    ushort type;
+    ushort machine;
+    uint version;
+    uint64 entry;
+    uint64 phoff;
+    uint64 shoff;
+    uint flags;
+    ushort ehsize;
+    ushort phentsize;
+    ushort phnum;
+    ushort shentsize;
+    ushort shnum;
+    ushort shstrndx;
+};
+
+// Program section header
+struct proghdr {
+    uint32 type;
+    uint32 flags;
+    uint64 off;
+    uint64 vaddr;
+    uint64 paddr;
+    uint64 filesz;
+    uint64 memsz;
+    uint64 align;
+};
+
+// Values for Proghdr type
+#define ELF_PROG_LOAD           1
+
+// Flag bits for Proghdr flags
+#define ELF_PROG_FLAG_EXEC      1
+#define ELF_PROG_FLAG_WRITE     2
+#define ELF_PROG_FLAG_READ      4
+
 
 void init_app_names()
 {
@@ -75,6 +120,135 @@ void bin_loader(uint64 start, uint64 end, struct proc *p)
 void loader(int id, struct proc *p) {
     infof("loader %s", names[id]);
     bin_loader(app_info_ptr[id], app_info_ptr[id + 1], p);
+}
+
+static void print_buf(char *buf, uint64 len)
+{
+    for (uint64 i = 0; i < len; ++i)
+    {
+        printf("%x", buf[i] >> 4);
+        printf("%x", buf[i] & 0xf);
+        printf(" ");
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+static int
+loadseg(pagetable_t pagetable, uint64 va, struct inode *inode, uint offset, uint sz)
+{
+    uint i, n;
+    uint64 pa;
+    if((va % PGSIZE) != 0)
+        panic("loadseg: va must be page aligned");
+
+    for(i = 0; i < sz; i += PGSIZE){
+        pa = walkaddr(pagetable, va + i);
+        if(pa == NULL)
+            panic("loadseg: address should exist");
+        if(sz - i < PGSIZE)
+            n = sz - i;
+        else
+            n = PGSIZE;
+        if(readi(inode, 0, (void*)pa, offset+i, n) != n)
+            return -1;
+//        print_buf((char*)pa, n);
+    }
+
+    return 0;
+}
+
+static void print_proghdr(struct proghdr *ph)
+{
+    printf("type: %x\n", ph->type);
+    printf("flags: %x\n", ph->flags);
+    printf("off: %x\n", ph->off);
+    printf("vaddr: %x\n", ph->vaddr);
+    printf("paddr: %x\n", ph->paddr);
+    printf("filesz: %x\n", ph->filesz);
+    printf("memsz: %x\n", ph->memsz);
+    printf("align: %x\n", ph->align);
+    printf("\n");
+}
+
+int elf_loader(char* name, struct proc *p) {
+    infof("elf_loader %s", name);
+
+    struct inode* inode = inode_by_name(name);
+    if (inode == NULL) {
+        infof("elf_loader inode_by_name failed");
+        return -1;
+    }
+
+    ilock(inode);
+
+    struct elfhdr elf;
+    struct proghdr ph;
+    int i, off;
+    uint64 old_pos = USER_TEXT_START;
+
+    // Check ELF header
+    if (readi(inode, FALSE, &elf, 0, sizeof(elf)) != sizeof(elf)) {
+        infof("elf_loader read elf header failed");
+        iunlockput(inode);
+        return -1;
+    }
+    if (elf.magic != ELF_MAGIC) {
+        infof("elf_loader invalid elf magic");
+        iunlockput(inode);
+        return -1;
+    }
+    if (elf.phnum == 0) {
+        infof("elf_loader no program header");
+        iunlockput(inode);
+        return -1;
+    }
+
+    proc_free_mem_and_pagetable(p);
+    p->total_size = 0;
+    p->pagetable = proc_pagetable(p);
+    KERNEL_ASSERT(p->pagetable != NULL, "elf_loader alloc page table failed");
+
+    // can't revoke the modification from here because the old page table is freed,
+    // so we must use panic.
+
+    for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
+        if(readi(inode, FALSE, &ph, off, sizeof(ph)) != sizeof(ph)) {
+            panic("elf_loader loop readi");
+        }
+        if(ph.type != ELF_PROG_LOAD) {
+            continue;
+        }
+        if(ph.memsz < ph.filesz) {
+            panic("elf_loader loop memsz 1");
+        }
+        if(ph.vaddr + ph.memsz < ph.vaddr) {
+            panic("elf_loader loop memsz 2");
+        }
+        if(ph.vaddr % PGSIZE != 0) {
+            panic("elf_loader loop memsz 3");
+        }
+        uint64 new_pos;
+        if((new_pos = uvmalloc(p->pagetable, old_pos, ph.vaddr + ph.memsz)) == 0)
+            panic("elf_loader loop uvmalloc");
+        old_pos = PGROUNDUP(new_pos);
+        infof("elf_loader loop vaddr %p\n", ph.vaddr);
+        if(loadseg(p->pagetable, ph.vaddr, inode, ph.off, ph.filesz) < 0)
+            panic("elf_loader loop loadseg");
+    }
+
+    iunlockput(inode);
+
+    p->trapframe->epc = elf.entry;
+    infof("elf_loader epc %p\n", elf.entry);
+    alloc_ustack(p);
+    p->next_shmem_addr = (void*) p->ustack_bottom+PGSIZE;
+    p->total_size = USTACK_SIZE + (old_pos - USER_TEXT_START);
+    p->heap_start = old_pos;
+    infof("elf_loader total_size %p\n", p->total_size);
+    return 0;
 }
 
 // load shell from kernel data section
