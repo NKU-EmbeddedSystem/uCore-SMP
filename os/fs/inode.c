@@ -618,7 +618,7 @@ dirlookup(struct inode *dp, char *name) {
         strcat(path, "/");
     }
     strcat(path, name);
-    printf("dirlookup: path: %s\n", path);
+    infof("dirlookup: path: %s\n", path);
 
     // get the inode of the queried entity
     struct inode *inode_ptr, *empty;
@@ -692,8 +692,8 @@ struct inode *
 icreate(struct inode *dp, char *name, int type, int major, int minor) {
     KERNEL_ASSERT(dp->type == T_DIR, "icreate_file: not a directory");
 
-    printf("icreate: %s\n", name);
-    printf("current directory: %s\n", dp->path);
+    infof("icreate: %s\n", name);
+    infof("current directory: %s\n", dp->path);
     // get absolute path of the queried entity
     char path[MAXPATH];
     memmove(path, dp->path, MAXPATH);
@@ -701,7 +701,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         strcat(path, "/");
     }
     strcat(path, name);
-    printf("icreate: path: %s\n", path);
+    infof("icreate: path: %s\n", path);
 
     // create the inode of the queried entity
     // get the inode of the queried entity
@@ -728,19 +728,19 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
     inode_ptr = empty;
     FRESULT result;
 
-    printf("inode_ptr: %p\n", inode_ptr);
+    infof("inode_ptr: %p\n", inode_ptr);
 
     if (type == T_DIR) {
-        printf("icreate::dir: %s\n", path);
+        infof("icreate::dir: %s\n", path);
         // create directory via fatfs interface
         if ((result = f_mkdir(path)) != FR_OK) {
-            printf("icreate::dir: f_mkdir failed: %d\n", result);
+            infof("icreate::dir: f_mkdir failed: %d\n", result);
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return NULL;
         }
         if ((result = f_opendir(&inode_ptr->dir, path)) != FR_OK) {
-            printf("icreate::dir: f_opendir failed: %d\n", result);
+            infof("icreate::dir: f_opendir failed: %d\n", result);
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return NULL;
@@ -754,10 +754,10 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         return inode_ptr;
 
     } else if (type == T_FILE) {
-        printf("icreate::file: %s\n", path);
+        infof("icreate::file: %s\n", path);
         // create file via fatfs interface
         if ((result = f_open(&inode_ptr->file, path, FA_CREATE_ALWAYS | FA_WRITE | FA_READ)) != FR_OK) {
-            printf("icreate::file: f_open failed: %d\n", result);
+            infof("icreate::file: f_open failed: %d\n", result);
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return NULL;
@@ -771,7 +771,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         return inode_ptr;
 
     } else if (type == T_DEVICE) {
-        printf("icreate::device: %s\n", path);
+        infof("icreate::device: %s\n", path);
         // create device via fatfs interface
         struct device devinfo = {
                 .magic = DEVICE_MAGIC,
@@ -782,7 +782,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         if ((result = f_open(&inode_ptr->file, path, FA_CREATE_ALWAYS | FA_WRITE | FA_READ)) != FR_OK ||
             (result = f_write(&inode_ptr->file, &devinfo, sizeof(devinfo), &bw)) != FR_OK ||
             bw != sizeof(devinfo)) {
-            printf("icreate::device: f_open/f_write failed: %d\n", result);
+            infof("icreate::device: f_open/f_write failed: %d\n", result);
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return NULL;
@@ -798,7 +798,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         return inode_ptr;
 
     } else {
-        printf("icreate: unknown type: %d\n", type);
+        infof("icreate: unknown type: %d\n", type);
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return NULL;

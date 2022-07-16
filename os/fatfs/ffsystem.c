@@ -60,7 +60,6 @@ int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object
 	FF_SYNC_t* sobj		/* Pointer to return the created sync object */
 )
 {
-    printf("ff_cre_syncobj\n");
     /* Spinlock */
 //    if (!lock_init[vol]) {
 //        init_spin_lock_with_name(&lock[vol], "fatfs");

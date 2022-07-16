@@ -13,18 +13,18 @@
 void print_block(const uint8_t *gpt_buf);
 
 void sdcard_test() {
-    printf("Initializing sd\n");
+    infof("Initializing sd\n");
 
     unsigned int peripheral_input_khz = 500000; // copy from fsbl\main.c:173
     spi_ctrl* spictrl = (spi_ctrl*) SPI2_CTRL_ADDR;
 
     int error = sd_init(spictrl, peripheral_input_khz, 0);
-    printf("initialize_sd result %d\n", error);
+    infof("initialize_sd result %d\n", error);
     if (error) return;
 
     uint8_t gpt_buf[GPT_BLOCK_SIZE];
     error = sd_read_blocks(spictrl, gpt_buf, GPT_HEADER_LBA, 1);
-    printf("sd_read_blocks result %d\n", error);
+    infof("sd_read_blocks result %d\n", error);
     print_block(gpt_buf);
 
 //    gpt_partition_range part_range;
