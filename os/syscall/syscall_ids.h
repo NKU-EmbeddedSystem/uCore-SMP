@@ -40,4 +40,8 @@
 #define SYS_mailread 401
 #define SYS_mailwrite 402
 
+// dummy syscall
+#define SYS_rt_sigtimedwait 137
+#define SYS_prlimit64 261
+
 #endif // SYSCALL_IDS_H

@@ -83,4 +83,8 @@ int sys_nanosleep(struct timeval *req_va, struct timeval *rem_va);
 
 int sys_brk(void* addr);
 
+int sys_dummy_success(void);
+
+int sys_dummy_failure(void);
+
 #endif // SYSCALL_IMPL_H

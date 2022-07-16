@@ -839,3 +839,11 @@ int sys_brk(void* addr) {
     p->total_size += new_pos - old_pos;
     return 0;
 }
+
+int sys_dummy_success() {
+    return 0;
+}
+
+int sys_dummy_failure() {
+    return -1;
+}

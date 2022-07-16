@@ -90,6 +90,10 @@ char *syscall_names(int id)
         return "SYS_sharedmem";
     case SYS_nanosleep:
         return "SYS_nanosleep";
+    case SYS_rt_sigtimedwait:
+        return "SYS_rt_sigtimedwait";
+    case SYS_prlimit64:
+        return "SYS_prlimit64";
     default:
         return "?";
     }
@@ -201,6 +205,12 @@ void syscall()
         break;
     case SYS_brk:
         ret = sys_brk((void *)args[0]);
+        break;
+    case SYS_rt_sigtimedwait:
+        ret = sys_dummy_success();
+        break;
+    case SYS_prlimit64:
+        ret = sys_dummy_success();
         break;
     default:
         ret = -1;
