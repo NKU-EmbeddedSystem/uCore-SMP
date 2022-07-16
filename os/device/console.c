@@ -9,15 +9,21 @@ void console_init(){
 
 
 int64 console_write(char *src, int64 len, int from_user) {
-    int64 i;
-    for (i = 0; i < len; i++) {
-        char c;
-        if (either_copyin(&c, src + i, 1, from_user) == -1)
-            break;
-        sbi_console_putchar(c);
+    char copybuf[len + 1];
+    if (from_user) {
+        struct proc *p = curr_proc();
+        acquire(&p->lock);
+        if (copyin(p->pagetable, copybuf, (uint64)src, len) < 0) {
+            release(&p->lock);
+            return 0;
+        }
+        release(&p->lock);
+    } else {
+        memmove(copybuf, src, len);
     }
-
-    return i;
+    copybuf[len] = '\0';
+    printf("%s", copybuf);
+    return len;
 }
 
 int64 console_read(char *dst, int64 len, int to_user) {
