@@ -263,18 +263,15 @@ int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]) {
     copyinstr(p->pagetable, name, (uint64)pathname_va, MAXPATH);
     infof("sys_exec %s", name);
 
-    int argc = 0;
-    int envc = 0;
+    int argc, envc;
     const char *argv[MAX_EXEC_ARG_COUNT];
     const char *envp[MAX_EXEC_ARG_COUNT];
     // tracecore("argv_va=%d argc=%d", argv_va, argc);
-    if (argv_va == NULL) {
-        // nothing
-    } else {
-        argc = arg_copy(p, argv_va, argv, argv_str);
-        envc = arg_copy(p, envp_va, envp, envp_str);
-    }
+    argc = argv_va == NULL ? 0 : arg_copy(p, argv_va, argv, argv_str);
+    envc = envp_va == NULL ? 0 : arg_copy(p, envp_va, envp, envp_str);
+
     tracecore("argv_va=%d argc=%d", argv_va, argc);
+    tracecore("envp_va=%d envc=%d", envp_va, envc);
 
     return exec(name, argc, argv, envc, envp);
 }

@@ -49,6 +49,8 @@ struct proghdr {
 
 // Values for Proghdr type
 #define ELF_PROG_LOAD           1
+#define ELF_PROG_GNU_STACK      0x6474E551
+#define ELF_PROG_GNU_RELRO      0x6474E552
 
 // Flag bits for Proghdr flags
 #define ELF_PROG_FLAG_EXEC      1
@@ -122,16 +124,36 @@ void loader(int id, struct proc *p) {
     bin_loader(app_info_ptr[id], app_info_ptr[id + 1], p);
 }
 
-static void print_buf(char *buf, uint64 len)
+static void print_buf(char *buf, uint64 len, uint64 va)
 {
-    for (uint64 i = 0; i < len; ++i)
+//    for (uint64 i = 0; i < len; ++i)
+//    {
+//        printf("%x", buf[i] >> 4);
+//        printf("%x", buf[i] & 0xf);
+//        printf(" ");
+//        if ((i + 1) % 16 == 0) {
+//            printf("\n");
+//        }
+//    }
+//    printf("\n");
+    const int line_len = 16;
+    uint64 skip = va % line_len;
+    uint64 vlen = len + skip;
+    uint64 vva = va - skip;
+    for (uint64 i = 0; i < vlen; i += line_len)
     {
-        printf("%x", buf[i] >> 4);
-        printf("%x", buf[i] & 0xf);
-        printf(" ");
-        if ((i + 1) % 16 == 0) {
-            printf("\n");
+        printf("%p: ", vva + i);
+        for (uint64 j = 0; j < line_len; ++j)
+        {
+            if (i + j < va % line_len) {
+                printf("?? ");
+            } else {
+                printf("%x", buf[i + j - skip] >> 4);
+                printf("%x", buf[i + j - skip] & 0xf);
+                printf(" ");
+            }
         }
+        printf("\n");
     }
     printf("\n");
 }
@@ -139,22 +161,92 @@ static void print_buf(char *buf, uint64 len)
 static int
 loadseg(pagetable_t pagetable, uint64 va, struct inode *inode, uint offset, uint sz)
 {
-    uint i, n;
-    uint64 pa;
-    if((va % PGSIZE) != 0)
-        panic("loadseg: va must be page aligned");
+    uint64 i;
+    uint64 pa_align, pa;
+    uint64 va_align, va_begin, va_end, copy_size, temp_size = 0;
 
-    for(i = 0; i < sz; i += PGSIZE){
-        pa = walkaddr(pagetable, va + i);
-        if(pa == NULL)
+    // prefix part
+    va_align = PGROUNDDOWN(va);
+    va_begin = va;
+    va_end = MIN(PGROUNDUP(va), va_begin + sz);
+    if (va_begin != va_end) {
+        pa_align = walkaddr(pagetable, va_align);
+        if (pa_align == NULL) {
             panic("loadseg: address should exist");
-        if(sz - i < PGSIZE)
-            n = sz - i;
-        else
-            n = PGSIZE;
-        if(readi(inode, 0, (void*)pa, offset+i, n) != n)
+        }
+        pa = pa_align + (va_begin - va_align);
+        copy_size = va_end - va_begin;
+        infof("loadseg: copy prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
+        if(readi(inode, 0, (void*)pa, offset + temp_size, copy_size) != copy_size) {
+            infof("loadseg: readi error, read offset: %x, read size: %x", offset + temp_size, copy_size);
             return -1;
-//        print_buf((char*)pa, n);
+        }
+//        print_buf((char*)pa, copy_size, va_begin);
+        temp_size += copy_size;
+    }
+    if (temp_size == sz) {
+        return 0;
+    }
+
+    // middle part and suffix part
+    va_begin = PGROUNDUP(va);
+    va_end = va + sz;
+    for (i = va_begin; i < va_end; i += PGSIZE) {
+        pa = walkaddr(pagetable, i);
+        if (pa == NULL) {
+            panic("loadseg: address should exist");
+        }
+        copy_size = MIN(PGSIZE, va_end - i);
+        infof("loadseg: copy middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
+        if(readi(inode, 0, (void*)pa, offset + temp_size, copy_size) != copy_size) {
+            infof("loadseg: readi error, read offset: %x, read size: %x", offset + temp_size);
+            return -1;
+        }
+//        print_buf((char*)pa, copy_size, i);
+        temp_size += copy_size;
+    }
+
+    return 0;
+}
+
+static int
+cleanseg(pagetable_t pagetable, uint64 va, uint sz)
+{
+    uint64 i;
+    uint64 pa_align, pa;
+    uint64 va_align, va_begin, va_end, copy_size, temp_size = 0;
+
+    // prefix part
+    va_align = PGROUNDDOWN(va);
+    va_begin = va;
+    va_end = MIN(PGROUNDUP(va), va_begin + sz);
+    if (va_begin != va_end) {
+        pa_align = walkaddr(pagetable, va_align);
+        if (pa_align == NULL) {
+            panic("cleanseg: address should exist");
+        }
+        pa = pa_align + (va_begin - va_align);
+        copy_size = va_end - va_begin;
+        infof("cleanseg: clean prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
+        memset((void*)pa, 0, copy_size);
+        temp_size += copy_size;
+    }
+    if (temp_size == sz) {
+        return 0;
+    }
+
+    // middle part and suffix part
+    va_begin = PGROUNDUP(va);
+    va_end = va + sz;
+    for (i = va_begin; i < va_end; i += PGSIZE) {
+        pa = walkaddr(pagetable, i);
+        if (pa == NULL) {
+            panic("cleanseg: address should exist");
+        }
+        copy_size = MIN(PGSIZE, va_end - i);
+        infof("cleanseg: clean middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
+        memset((void*)pa, 0, copy_size);
+        temp_size += copy_size;
     }
 
     return 0;
@@ -187,7 +279,7 @@ int elf_loader(char* name, struct proc *p) {
     struct elfhdr elf;
     struct proghdr ph;
     int i, off;
-    uint64 old_pos = USER_TEXT_START;
+    uint64 pos = USER_TEXT_START;
 
     // Check ELF header
     if (readi(inode, FALSE, &elf, 0, sizeof(elf)) != sizeof(elf)) {
@@ -218,25 +310,24 @@ int elf_loader(char* name, struct proc *p) {
         if(readi(inode, FALSE, &ph, off, sizeof(ph)) != sizeof(ph)) {
             panic("elf_loader loop readi");
         }
-        if(ph.type != ELF_PROG_LOAD) {
+//        print_proghdr(&ph);
+        if (ph.type != ELF_PROG_LOAD) {
             continue;
         }
-        if(ph.memsz < ph.filesz) {
+        if (ph.memsz < ph.filesz) {
             panic("elf_loader loop memsz 1");
         }
-        if(ph.vaddr + ph.memsz < ph.vaddr) {
+        if (ph.vaddr + ph.memsz < ph.vaddr) {
             panic("elf_loader loop memsz 2");
         }
-        if(ph.vaddr % PGSIZE != 0) {
-            panic("elf_loader loop memsz 3");
-        }
-        uint64 new_pos;
-        if((new_pos = uvmalloc(p->pagetable, old_pos, ph.vaddr + ph.memsz)) == 0)
+        if ((pos = uvmalloc(p->pagetable, pos, ph.vaddr + ph.memsz)) == 0)
             panic("elf_loader loop uvmalloc");
-        old_pos = PGROUNDUP(new_pos);
-        infof("elf_loader loop vaddr %p\n", ph.vaddr);
-        if(loadseg(p->pagetable, ph.vaddr, inode, ph.off, ph.filesz) < 0)
+        infof("elf_loader loop vaddr range %p-%p", ph.vaddr, ph.vaddr + ph.memsz);
+        if (loadseg(p->pagetable, ph.vaddr, inode, ph.off, ph.filesz) < 0)
             panic("elf_loader loop loadseg");
+//        if (ph.memsz - ph.filesz > 0 &&
+//            cleanseg(p->pagetable, ph.vaddr + ph.filesz, ph.memsz - ph.filesz) < 0)
+//            panic("elf_loader loop cleanseg");
     }
 
     iunlockput(inode);
@@ -245,8 +336,8 @@ int elf_loader(char* name, struct proc *p) {
     infof("elf_loader epc %p\n", elf.entry);
     alloc_ustack(p);
     p->next_shmem_addr = (void*) p->ustack_bottom+PGSIZE;
-    p->total_size = USTACK_SIZE + (old_pos - USER_TEXT_START);
-    p->heap_start = old_pos;
+    p->total_size = USTACK_SIZE + (pos - USER_TEXT_START);
+    p->heap_start = pos;
     infof("elf_loader total_size %p\n", p->total_size);
     return 0;
 }

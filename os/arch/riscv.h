@@ -315,8 +315,11 @@ static inline void sfence_vma() {
 #define PGSIZE 4096// bytes per page
 #define PGSHIFT 12// bits of offset within a page
 
-#define PGROUNDUP(sz) (((sz) + PGSIZE - 1) & ~(PGSIZE - 1))
-#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE - 1))
+#define ROUNDUP(x, y) (((x) + (y) - 1) & ~((y) - 1))
+#define ROUNDDOWN(x, y) ((x) & ~((y) - 1))
+
+#define PGROUNDUP(sz) ROUNDUP(sz, PGSIZE)
+#define PGROUNDDOWN(a) ROUNDDOWN(a, PGSIZE)
 
 #define PTE_V (1L << 0)// valid
 #define PTE_R (1L << 1)
