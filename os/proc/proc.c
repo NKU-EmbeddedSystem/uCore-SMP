@@ -11,6 +11,8 @@
 #include <fatfs/init.h>
 
 struct proc pool[NPROC];
+volatile struct proc *creating_proc;
+struct spinlock creating_lock;
 
 __attribute__((aligned(16))) char kstack[NPROC][KSTACK_SIZE];
 // helps ensure that wakeups of wait()ing
@@ -51,6 +53,7 @@ void procinit(void) {
     struct proc *p;
     init_spin_lock_with_name(&pool_lock, "pool_lock");
     init_spin_lock_with_name(&wait_lock, "wait_lock");
+    init_spin_lock_with_name(&creating_lock, "creating_lock");
     // init_spin_lock_with_name(&proc_tree_lock, "proc_tree_lock");
     for (p = pool; p < &pool[NPROC]; p++) {
         init_spin_lock_with_name(&p->lock, "proc.lock");
@@ -203,6 +206,17 @@ struct proc *alloc_proc(void) {
     return NULL;
 
 found:
+    // set creating proc to p
+    for (;;) {
+        acquire(&creating_lock);
+        if (creating_proc == NULL) {
+            creating_proc = p;
+            release(&creating_lock);
+            break;
+        }
+        release(&creating_lock);
+    }
+
     p->pid = alloc_pid();
     p->state = USED;
     p->total_size = 0;
@@ -252,6 +266,10 @@ found:
 void forkret(void) {
     pushtrace(0x3200);
     static int first = TRUE;
+    // reset creating_proc to NULL
+    acquire(&creating_lock);
+    creating_proc = NULL;
+    release(&creating_lock);
     // Still holding p->lock from scheduler.
     release(&curr_proc()->lock);
 
@@ -400,18 +418,17 @@ int fdalloc2(struct file *f, int fd) {
 void wakeup(void *waiting_target) {
     struct proc *p;
 
+    acquire(&creating_lock);
     for (p = pool; p < &pool[NPROC]; p++) {
-        if (p != curr_proc()) {
-            if (p->state != SLEEPING) {
-                continue;
-            }
+        if (p != curr_proc() && p != creating_proc) {
             acquire(&p->lock);
-            if (p->waiting_target == waiting_target) {
+            if (p->state == SLEEPING && p->waiting_target == waiting_target) {
                 p->state = RUNNABLE;
             }
             release(&p->lock);
         }
     }
+    release(&creating_lock);
 }
 
 // Atomically release lock and sleep on chan.
