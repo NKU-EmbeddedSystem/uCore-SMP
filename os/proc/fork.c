@@ -23,6 +23,8 @@ int clone(void* stack) {
         return -1;
     }
     np->total_size = p->total_size;
+    np->heap_start = p->heap_start;
+    np->heap_sz = p->heap_sz;
     np->stride  = p->stride;
     // copy saved user registers.
     *(np->trapframe) = *(p->trapframe);
