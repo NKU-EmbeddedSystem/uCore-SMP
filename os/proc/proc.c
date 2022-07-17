@@ -123,6 +123,14 @@ void proc_free_mem_and_pagetable(struct proc* p) {
         }
     }
 
+    // total_size sanity check, avoid memory leak
+    KERNEL_ASSERT(
+            p->total_size ==
+            (p->heap_start - USER_TEXT_START) + // bin size
+            p->heap_sz + // heap size
+            USTACK_SIZE, // stack size
+            "proc_free_mem_and_pagetable: total_size sanity check failed"
+    );
     free_user_mem_and_pagetables(p->pagetable, p->total_size);
     p->pagetable = NULL;
     p->total_size = 0;
@@ -362,6 +370,7 @@ void print_proc(struct proc *proc) {
     printf_k("*     ra:             %p\n", proc->context.ra);
     printf_k("*     sp:             %p\n", proc->context.sp);
     printf_k("* total_size:         %p\n", proc->total_size);
+    printf_k("* heap_start:         %p\n", proc->heap_start);
     printf_k("* heap_sz:            %p\n", proc->heap_sz);
     printf_k("* stride:             %p\n", proc->stride);
     printf_k("* priority:           %p\n", proc->priority);
@@ -437,7 +446,7 @@ void sleep(void *waiting_target, struct spinlock *lk) {
     
     struct proc *p = curr_proc();
 
-    tracecore("sleep");
+//    tracecore("sleep");
     // Must acquire p->lock in order to
     // change p->state and then call switch_to_scheduler.
     // Once we hold p->lock, we can be

@@ -88,9 +88,14 @@ int get_app_id_by_name(char *name)
 
 void alloc_ustack(struct proc *p)
 {
-    if (mappages(p->pagetable, USER_STACK_BOTTOM - USTACK_SIZE, USTACK_SIZE, (uint64)alloc_physical_page(), PTE_U | PTE_R | PTE_W | PTE_X) != 0)
-    {
-        panic("alloc_ustack");
+    for (uint64 va = USER_STACK_BOTTOM - USTACK_SIZE; va < USER_STACK_BOTTOM; va += PGSIZE) {
+        void *pa = alloc_physical_page();
+        if (!pa) {
+            panic("alloc_ustack::alloc_physical_page failed");
+        }
+        if (mappages(p->pagetable, va, PGSIZE, (uint64)pa, PTE_U | PTE_R | PTE_W | PTE_X) != 0) {
+            panic("alloc_ustack::mappages failed");
+        }
     }
     p->ustack_bottom = USER_STACK_BOTTOM;
     p->trapframe->sp = p->ustack_bottom;
