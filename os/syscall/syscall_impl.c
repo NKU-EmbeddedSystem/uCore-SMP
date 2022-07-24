@@ -5,6 +5,7 @@
 #include <file/stat.h>
 #include <file/fcntl.h>
 #include <mem/shared.h>
+#include <mem/memory_layout.h>
 #define min(a, b) (a) < (b) ? (a) : (b);
 
 int sys_fstat(int fd, struct kstat *statbuf_va){
@@ -382,82 +383,334 @@ int sys_openat(int dirfd, char *filename, int flags, int mode) {
     return fileopenat(dirfd, path, flags);
 }
 
-int64 sys_mmap(void *start, uint64 len, int prot) {
-    if (len == 0)
-        return 0;
+//int64 sys_mmap(void *start, uint64 len, int prot) {
+//    if (len == 0)
+//        return 0;
+//
+//    if (len > 1024 * 1024 * 1024) {
+//        return -1;
+//    }
+//    uint64 aligned_len = PGROUNDUP(len);
+//
+//    uint64 offset = (uint64)start & 0xfff;
+//    if (offset != 0) {
+//        return -1;
+//    }
+//    if ((prot & ~0x7) != 0) {
+//        return -1;
+//    }
+//    if ((prot & 0x7) == 0) {
+//        return -1;
+//    }
+//    struct proc *curr_pcb = curr_proc();
+//    uint64 map_size = 0;
+//    while (aligned_len > 0) {
+//        void *pa = alloc_physical_page();
+//        // int PER_R = prot & 1;
+//        // int PER_W = prot & 2;
+//        // int PER_X = prot & 4;
+//
+//        if (map1page(curr_pcb->pagetable, (uint64)start,
+//                     (uint64)pa, PTE_U | (prot << 1)) < 0) {
+//            debugf("sys_mmap mappages fail\n");
+//            return -1;
+//        }
+//        aligned_len -= PGSIZE;
+//        start += PGSIZE;
+//        map_size += PGSIZE;
+//    }
+//
+//    if (aligned_len != 0) {
+//        panic("aligned_len != 0");
+//    }
+//    // TODO: add size to proc.size
+//    debugf("map_size=%p\n", map_size);
+//    return map_size;
+//}
+//
+//int64 sys_munmap(void *start, uint64 len) {
+//    uint64 va = (uint64)start;
+//    uint64 a;
+//    pte_t *pte;
+//    pagetable_t pagetable = curr_proc()->pagetable;
+//
+//    if (((uint64)start % PGSIZE) != 0) {
+//        return -1;
+//    }
+//    int npages = PGROUNDUP(len) / PGSIZE;
+//
+//    for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
+//        if ((pte = walk(pagetable, a, FALSE)) == 0) {
+//            infof("uvmunmap: walk\n");
+//            return -1;
+//        }
+//        if ((*pte & PTE_V) == 0) {
+//            infof("uvmunmap: not mapped\n");
+//            return -1;
+//        }
+//        if (PTE_FLAGS(*pte) == PTE_V) {
+//            infof("uvmunmap: not a leaf\n");
+//            return -1;
+//        }
+//
+//        uint64 pa = PTE2PA(*pte);
+//        recycle_physical_page((void *)pa);
+//
+//        *pte = 0;
+//    }
+//    return npages * PGSIZE;
+//}
 
-    if (len > 1024 * 1024 * 1024) {
-        return -1;
-    }
-    uint64 aligned_len = PGROUNDUP(len);
-
-    uint64 offset = (uint64)start & 0xfff;
-    if (offset != 0) {
-        return -1;
-    }
-    if ((prot & ~0x7) != 0) {
-        return -1;
-    }
-    if ((prot & 0x7) == 0) {
-        return -1;
-    }
-    struct proc *curr_pcb = curr_proc();
-    uint64 map_size = 0;
-    while (aligned_len > 0) {
-        void *pa = alloc_physical_page();
-        // int PER_R = prot & 1;
-        // int PER_W = prot & 2;
-        // int PER_X = prot & 4;
-
-        if (map1page(curr_pcb->pagetable, (uint64)start,
-                     (uint64)pa, PTE_U | (prot << 1)) < 0) {
-            debugf("sys_mmap mappages fail\n");
-            return -1;
+static bool is_free_range(pagetable_t pagetable, uint64 start, uint npages) {
+    uint64 va;
+    pte_t *pte;
+    for (va = start; va < start + npages * PGSIZE; va += PGSIZE) {
+        if ((pte = walk(pagetable, va, FALSE)) == 0) {
+            return FALSE;
         }
-        aligned_len -= PGSIZE;
-        start += PGSIZE;
-        map_size += PGSIZE;
+        if ((*pte & PTE_V) != 0) {
+            return FALSE;
+        }
     }
-
-    if (aligned_len != 0) {
-        panic("aligned_len != 0");
-    }
-    // TODO: add size to proc.size
-    debugf("map_size=%p\n", map_size);
-    return map_size;
+    return TRUE;
 }
 
-int64 sys_munmap(void *start, uint64 len) {
-    uint64 va = (uint64)start;
-    uint64 a;
-    pte_t *pte;
-    pagetable_t pagetable = curr_proc()->pagetable;
+static void *get_free_range(pagetable_t pagetable, uint npages, uint64 hint_address) {
+    uint64 va;
+    if (hint_address) {
+        for (va = hint_address; va <= USER_STACK_BOTTOM - USTACK_SIZE - (npages + 1) * PGSIZE; va += PGSIZE) {
+            if (is_free_range(pagetable, va, npages)) {
+                return (void *)va;
+            }
+        }
+    } else {
+        for (va = USER_STACK_BOTTOM - USTACK_SIZE - npages * PGSIZE; va > USER_TEXT_START; va -= PGSIZE) {
+            if (is_free_range(pagetable, va, npages)) {
+                return (void *) va;
+            }
+        }
+    }
+    return NULL;
+}
 
-    if (((uint64)start % PGSIZE) != 0) {
+static int mapping_add(struct proc *p, uint64 va, uint npages, bool shared) {
+    KERNEL_ASSERT(p->maps[MAX_MAPPING - 1].va == NULL, "mapping_add: too many mappings");
+
+    // find a entry to insert
+    int i;
+    for (i = 0; i < MAX_MAPPING; i++) {
+        if (p->maps[i].va > va || p->maps[i].va == NULL) {
+            break;
+        }
+    }
+
+    // make sure there's no overlap
+    if (p->maps[i].va && va + npages * PGSIZE > p->maps[i].va) {
+        infof("mapping_add: overlap");
         return -1;
     }
-    int npages = PGROUNDUP(len) / PGSIZE;
 
-    for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
-        if ((pte = walk(pagetable, a, FALSE)) == 0) {
-            infof("uvmunmap: walk\n");
-            return -1;
-        }
-        if ((*pte & PTE_V) == 0) {
-            infof("uvmunmap: not mapped\n");
-            return -1;
-        }
-        if (PTE_FLAGS(*pte) == PTE_V) {
-            infof("uvmunmap: not a leaf\n");
-            return -1;
-        }
-
-        uint64 pa = PTE2PA(*pte);
-        recycle_physical_page((void *)pa);
-
-        *pte = 0;
+    // move all mappings after i to the right
+    for (int j = MAX_MAPPING - 1; j > i; j--) {
+        p->maps[j] = p->maps[j - 1];
     }
-    return npages * PGSIZE;
+
+    // insert the new mapping
+    p->maps[i].va = va;
+    p->maps[i].npages = npages;
+    p->maps[i].shared = shared;
+    return 0;
+}
+
+static int mapping_remove(struct proc *p, uint64 va, uint npages) {
+    // find the mapping
+    int i;
+    for (i = 0; i < MAX_MAPPING; i++) {
+        if (p->maps[i].va == va && p->maps[i].npages == npages) {
+            break;
+        }
+    }
+    if (i == MAX_MAPPING) {
+        infof("mapping_remove: not found");
+        return -1;
+    }
+
+    // move all mappings after i to the left
+    for (int j = i; j < MAX_MAPPING - 1; j++) {
+        p->maps[j] = p->maps[j + 1];
+    }
+    memset(&p->maps[MAX_MAPPING - 1], 0, sizeof(struct mapping));
+    return 0;
+}
+
+void *sys_mmap(void *start, size_t len, int prot, int flags, int fd, off_t off) {
+    struct proc *p = curr_proc();
+    if (p->maps[MAX_MAPPING - 1].va != 0) {
+        infof("sys_mmap: too many mappings");
+        return MAP_FAILED;
+    }
+
+    // length sanity check and do alignment
+    if (len == 0) {
+        infof("sys_mmap: len cannot be 0");
+        return MAP_FAILED;
+    }
+    len = PGROUNDUP(len);
+    uint npages = len / PGSIZE;
+
+    // get valid start address
+    if (flags & MAP_FIXED) {
+        // MAP_FIXED sanity check
+        if (start == NULL) {
+            infof("MAP_FIXED: start cannot be NULL");
+            return MAP_FAILED;
+        }
+        if (((uint64)start % PGSIZE) != 0) {
+            infof("MAP_FIXED: start must be page aligned");
+            return MAP_FAILED;
+        }
+
+        if (!is_free_range(p->pagetable, (uint64)start, npages)) {
+            infof("MAP_FIXED: start is not free");
+            return MAP_FAILED;
+        }
+    } else {
+        start = get_free_range(p->pagetable, npages, PGROUNDUP((uint64)start));
+        if (start == NULL) {
+            infof("sys_mmap: no free range");
+            return MAP_FAILED;
+        }
+    }
+
+    // calculate page protection
+     int page_prot = PTE_U;
+     if (prot & PROT_READ) {
+        page_prot |= PTE_R;
+     }
+    if (prot & PROT_WRITE) {
+        page_prot |= PTE_W;
+    }
+    if (prot & PROT_EXEC) {
+        page_prot |= PTE_X;
+    }
+
+    // do mmap
+    void *pa_arr[npages];
+    memset(pa_arr, 0, sizeof(pa_arr));
+
+    if (flags & MAP_ANONYMOUS) {
+        // allocate physical pages
+        for (uint i = 0; i < npages; i++) {
+            void *pa = alloc_physical_page();
+            if (pa == NULL) {
+                infof("sys_mmap: no free physical page");
+                goto free_pages;
+            }
+            pa_arr[i] = pa;
+        }
+    } else {
+        // read from file
+        if (fd < 0 || fd >= FD_MAX) {
+            infof("sys_mmap: invalid fd");
+            return MAP_FAILED;
+        }
+        struct file *f = p->files[fd];
+        if (f == NULL) {
+            infof("sys_mmap: invalid fd");
+            return MAP_FAILED;
+        }
+        if (f->type != FD_INODE) {
+            infof("sys_mmap: fd is not a file");
+            return MAP_FAILED;
+        }
+        if ((prot & PROT_WRITE) && !f->writable) {
+            infof("sys_mmap: file is not writable");
+            return MAP_FAILED;
+        }
+        if (off % PGSIZE != 0) {
+            infof("sys_mmap: offset is not page aligned");
+            return MAP_FAILED;
+        }
+        struct inode *ip = f->ip;
+        ilock(ip);
+        if (ip->type != T_FILE) {
+            iunlock(ip);
+            infof("sys_mmap: fd is not a file");
+            return MAP_FAILED;
+        }
+        if (PGROUNDUP(f_size(&ip->file)) < off + len) {
+            iunlock(ip);
+            infof("sys_mmap: file is too small");
+            return MAP_FAILED;
+        }
+        struct page_cache *cache;
+        void *pa;
+        for (uint i = 0; i < npages; i++) {
+            cache = ctable_acquire(ip, off + i * PGSIZE);
+            if (cache == NULL) {
+                iunlock(ip);
+                infof("sys_mmap: file is too small");
+                goto free_pages;
+            }
+            if (flags & MAP_SHARED) {
+                pa = cache->page;
+                dup_physical_page(cache->page);
+            } else {
+                pa = alloc_physical_page();
+                if (pa == NULL) {
+                    iunlock(ip);
+                    infof("sys_mmap: no free physical page");
+                    goto free_pages;
+                }
+                memmove(pa, cache->page, PGSIZE);
+            }
+            pa_arr[i] = pa;
+            release_mutex_sleep(&cache->lock);
+        }
+        iunlock(ip);
+    }
+
+    // map pages
+    for (uint i = 0; i < npages; i++) {
+        if (map1page(p->pagetable, (uint64)start + i * PGSIZE,
+                     (uint64)pa_arr[i], page_prot) < 0) {
+            panic("sys_mmap: map1page failed, should not happen");
+        }
+    }
+
+    // record mapping info
+    if (mapping_add(p, (uint64)start, npages, !!(flags & MAP_SHARED)) < 0) {
+        panic("sys_mmap: mapping_add failed, found data inconsistent");
+    }
+    return start;
+
+free_pages:
+    for (uint i = 0; i < npages; i++) {
+        if (pa_arr[i] == NULL) {
+            break;
+        }
+        put_physical_page(pa_arr[i]);
+    }
+    return MAP_FAILED;
+}
+
+int sys_munmap(void *start, size_t len) {
+    if ((uint64)start % PGSIZE != 0) {
+        infof("sys_munmap: start is not page aligned");
+        return -1;
+    }
+    len = PGROUNDUP(len);
+    uint npages = len / PGSIZE;
+
+    struct proc *p = curr_proc();
+
+    if (mapping_remove(p, (uint64)start, npages) < 0) {
+        infof("sys_munmap: not found");
+        return -1;
+    }
+
+    uvmunmap(p->pagetable, (uint64)start, npages, TRUE);
+    return 0;
 }
 
 ssize_t sys_read(int fd, void *dst_va, size_t len) {

@@ -206,6 +206,12 @@ void syscall()
     case SYS_brk:
         ret = sys_brk((void *)args[0]);
         break;
+    case SYS_mmap:
+        ret = sys_mmap((void *)args[0], args[1], args[2], args[3], args[4], args[5]);
+        break;
+    case SYS_munmap:
+        ret = sys_munmap((void *)args[0], args[1]);
+        break;
     case SYS_rt_sigtimedwait:
         ret = sys_dummy_success();
         break;

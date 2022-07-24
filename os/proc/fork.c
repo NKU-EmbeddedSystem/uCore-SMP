@@ -50,6 +50,18 @@ int clone(void* stack) {
         np->shmem[i] = (p->shmem[i] == NULL)? NULL: dup_shared_mem(p->shmem[i]);
         np->shmem_map_start[i] = p->shmem_map_start[i] ;
     }
+
+    // dup mapping
+    for (int i = 0; i < MAX_MAPPING; i++)
+    {
+        if (p->maps[i].va == NULL) {
+            break;
+        }
+        uvmmap_dup(p->pagetable, np->pagetable, p->maps[i].va, p->maps[i].npages, p->maps[i].shared);
+        np->maps[i].va = p->maps[i].va;
+        np->maps[i].npages = p->maps[i].npages;
+        np->maps[i].shared = p->maps[i].shared;
+    }
     
     np->next_shmem_addr = p->next_shmem_addr;
 

@@ -123,6 +123,16 @@ void proc_free_mem_and_pagetable(struct proc* p) {
         }
     }
 
+    // unmap mapping pages
+    for (int i = 0; i < MAX_MAPPING; i++)
+    {
+        if (p->maps[i].va == NULL) {
+            break;
+        }
+        uvmunmap(p->pagetable, (uint64)p->maps[i].va, p->maps[i].npages, TRUE);
+        memset(&p->maps[i], 0, sizeof(struct mapping));
+    }
+
     // total_size sanity check, avoid memory leak
     KERNEL_ASSERT(
             p->total_size ==
@@ -265,6 +275,14 @@ found:
        p->shmem_map_start[i]= 0;
     }
     p->next_shmem_addr = 0;
+
+    // clear mapping fields
+    for (int i = 0; i < MAX_MAPPING; i++)
+    {
+        p->maps[i].va = 0;
+        p->maps[i].npages = 0;
+        p->maps[i].shared = FALSE;
+    }
 
     return p;
 }

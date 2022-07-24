@@ -14,6 +14,7 @@
 #define PROC_NAME_MAX (16)
 #define MAX_PROC_SHARED_MEM_INSTANCE (32)   // every proc
 #define SIGCHLD (17)
+#define MAX_MAPPING (128)
 
 // for wait()
 #define WNOHANG		0x00000001
@@ -31,6 +32,12 @@ enum procstate {
     RUNNABLE,
     RUNNING,
     ZOMBIE
+};
+
+struct mapping {
+    uint64 va; // must be PGSIZE aligned
+    uint npages;
+    bool shared;
 };
 
 // Per-process state
@@ -66,6 +73,7 @@ struct proc {
     struct shared_mem * shmem[MAX_PROC_SHARED_MEM_INSTANCE];
     void * shmem_map_start[MAX_PROC_SHARED_MEM_INSTANCE];
     void* next_shmem_addr;
+    struct mapping maps[MAX_MAPPING];
     char name[PROC_NAME_MAX]; // Process name (debugging)
 };
 

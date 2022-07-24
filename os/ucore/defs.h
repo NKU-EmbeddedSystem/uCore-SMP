@@ -89,6 +89,7 @@ pagetable_t create_empty_user_pagetable(void);
 uint64 uvmalloc(pagetable_t, uint64, uint64);
 uint64 uvmdealloc(pagetable_t, uint64, uint64);
 int uvmcopy(pagetable_t, pagetable_t, uint64);
+int uvmmap_dup(pagetable_t old_pagetable, pagetable_t new_pagetable, uint64 va, uint npages, bool shared);
 void free_user_mem_and_pagetables(pagetable_t, uint64);
 void uvmunmap(pagetable_t, uint64, uint64, int);
 void uvmclear(pagetable_t, uint64);

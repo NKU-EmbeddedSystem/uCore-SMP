@@ -258,7 +258,7 @@ void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
         if (do_free)
         {
             uint64 pa = PTE2PA(*pte);
-            recycle_physical_page((void *)pa);
+            put_physical_page((void *)pa);
         }
         *pte = 0;
     }
@@ -439,6 +439,41 @@ err_ustack:
 err:
     debugcore("Copy user space error");
     uvmunmap(new_pagetable, USER_TEXT_START, (cur_addr - USER_TEXT_START) / PGSIZE, TRUE);
+    return -1;
+}
+
+int uvmmap_dup(pagetable_t old_pagetable, pagetable_t new_pagetable, uint64 va, uint npages, bool shared) {
+    pte_t *pte;
+    uint64 pa, cur_addr;
+    uint flags;
+    char *mem;
+    for (cur_addr = va; cur_addr < va + npages * PGSIZE; cur_addr += PGSIZE)
+    {
+        if ((pte = walk(old_pagetable, cur_addr, FALSE)) == 0)
+            panic("uvmcopy: pte should exist");
+        if ((*pte & PTE_V) == 0)
+            panic("uvmcopy: page not present");
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte);
+        if (shared) {
+            dup_physical_page((char *)pa);
+            mem = pa;
+        } else {
+            if ((mem = alloc_physical_page()) == 0)
+                goto err;
+            memmove(mem, (char *)pa, PGSIZE);
+        }
+        if (mappages(new_pagetable, cur_addr, PGSIZE, (uint64)mem, flags) != 0)
+        {
+            put_physical_page(mem);
+            goto err;
+        }
+    }
+    return 0;
+
+err:
+    debugcore("uvmmap_dup error");
+    uvmunmap(new_pagetable, va, npages, TRUE);
     return -1;
 }
 
