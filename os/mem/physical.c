@@ -16,6 +16,7 @@ struct
     struct spinlock lock;
     struct linklist *freelist;
     uint64 free_page_count;
+    uint8 pfn_ref[(PHYSTOP - KERNBASE) >> PGSHIFT];
 } kmem;
 
 uint64 get_free_page_count(){
@@ -60,6 +61,7 @@ void recycle_physical_page(void *pa) {
 
     kmem.freelist = l;
     kmem.free_page_count++;
+    kmem.pfn_ref[((uint64)l - KERNBASE) >> PGSHIFT] = 0;
     release(&kmem.lock);
 }
 
@@ -73,6 +75,7 @@ void *alloc_physical_page(void) {
     if (l) {
         kmem.freelist = l->next;
         kmem.free_page_count--;
+        kmem.pfn_ref[((uint64)l - KERNBASE) >> PGSHIFT] = 1;
     }
     release(&kmem.lock);
     if (l)
@@ -80,4 +83,30 @@ void *alloc_physical_page(void) {
     else
         warnf("Out of memory");
     return (void *)l;
+}
+
+void dup_physical_page(void *pa) {
+    acquire(&kmem.lock);
+    kmem.pfn_ref[((uint64)pa - KERNBASE) >> PGSHIFT]++;
+    release(&kmem.lock);
+}
+
+void put_physical_page(void *pa) {
+    struct linklist *l;
+    acquire(&kmem.lock);
+    if (--kmem.pfn_ref[((uint64)pa - KERNBASE) >> PGSHIFT] == 0) {
+        memset(pa, 1, PGSIZE);
+        l = (struct linklist *)pa;
+        l->next = kmem.freelist;
+        kmem.freelist = l;
+        kmem.free_page_count++;
+    }
+    release(&kmem.lock);
+}
+
+uint8 get_physical_page_ref(void *pa) {
+    acquire(&kmem.lock);
+    uint8 r = kmem.pfn_ref[((uint64)pa - KERNBASE) >> PGSHIFT];
+    release(&kmem.lock);
+    return r;
 }

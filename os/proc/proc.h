@@ -98,4 +98,5 @@ struct file *get_proc_file_by_fd(struct proc *p, int fd);
 pagetable_t proc_pagetable(struct proc *p);
 void freeproc(struct proc *p);
 int get_cpu_time(struct proc *p, struct tms *tms);
+bool the_only_proc_in_pool();
 #endif // PROC_H

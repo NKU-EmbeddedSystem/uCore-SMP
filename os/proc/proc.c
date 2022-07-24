@@ -526,3 +526,16 @@ int get_cpu_time(struct proc *p, struct tms *tms) {
     release(&pool_lock);
     return 0;
 }
+
+bool the_only_proc_in_pool() {
+    acquire(&pool_lock);
+    int count = 0;
+    struct proc *p;
+    for (p = pool; p < &pool[NPROC]; p++) {
+        if (p->state != UNUSED) {
+            count++;
+        }
+    }
+    release(&pool_lock);
+    return count == 1;
+}

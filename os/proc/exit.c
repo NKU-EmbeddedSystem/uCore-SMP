@@ -88,6 +88,13 @@ void exit(int code)
 
     proc_free_mem_and_pagetable(p);
 
+    // 3.5 free page cache if all processes are terminated
+    // call the function here because disk I/O contains 'sleep',
+    // we need a process context to call the 'sleep' function
+    if (the_only_proc_in_pool()) {
+        ctable_release_all();
+    }
+
     // 4. set the state
     acquire(&wait_lock);
     acquire(&p->lock);

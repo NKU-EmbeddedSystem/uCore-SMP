@@ -9,6 +9,7 @@
 
 #define NFILE       100  // open files per system
 #define NINODE       50  // maximum number of active i-nodes
+#define NCACHE       100  // page cache size
 #define NDEV         10  // maximum major device number
 #define ROOTDEV       1  // device number of file system root disk
 #define MAXOPBLOCKS  10  // max # of blocks any FS op writes

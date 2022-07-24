@@ -77,6 +77,9 @@ uint64 get_free_page_count();
 void *alloc_physical_page(void);
 void recycle_physical_page(void *);
 void kinit(void);
+void dup_physical_page(void *pa);
+void put_physical_page(void *pa);
+uint8 get_physical_page_ref(void *pa);
 
 // vm.c
 void kvminit(void);
@@ -149,6 +152,7 @@ void iunlockput(struct inode *);
 void iupdate(struct inode *);
 struct inode *inode_by_name(char *);
 struct inode *root_dir();
+void ctable_release_all();
 
 void itrunc(struct inode *);
 

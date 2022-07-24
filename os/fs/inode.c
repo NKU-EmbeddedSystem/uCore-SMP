@@ -8,6 +8,247 @@ struct {
     struct inode inode[NINODE];
 } itable;
 
+struct {
+    struct mutex lock;
+    struct page_cache cache[NCACHE];
+    struct page_cache* lru[NCACHE];
+} ctable;
+
+static int cache_writeback(struct page_cache* cache);
+
+static int ctable_lru_evict() {
+    infof("ctable_lru_evict");
+    for (int i = NCACHE - 1; i>=0;i--) {
+        struct page_cache* cache = ctable.lru[i];
+        if (cache &&                                        // cache entry exists
+            get_physical_page_ref(cache->page) == 1) {  // cache page is not shared
+
+            // if dirty, write back to disk
+            if (cache->dirty && cache_writeback(cache) != 0) {
+                panic("cache_writeback error");
+            }
+            recycle_physical_page(cache->page);
+
+            // dereference inode
+            iput(cache->host);
+
+            // clear the cache entry
+            memset(cache, 0, sizeof(struct page_cache));
+
+            // move cache entry from back to front
+            for (int j = i; j < NCACHE - 1; j++) {
+                ctable.lru[j] = ctable.lru[j+1];
+            }
+            ctable.lru[NCACHE - 1] = NULL;
+
+            return 0;
+        }
+    }
+    infof("ctable_lru_evict: no cache entry to evict");
+    return -1;
+}
+
+static int ctable_lru_add(struct page_cache* cache) {
+    infof("ctable_lru_add");
+    int i;
+    if (ctable.lru[NCACHE-1] != NULL && ctable_lru_evict() < 0) {
+        infof("ctable_lru_add: ctable_lru_evict error");
+        return -1;
+    }
+    for (i = NCACHE - 1; i > 0; i--) {
+        ctable.lru[i] = ctable.lru[i-1];
+    }
+    ctable.lru[0] = cache;
+    return 0;
+}
+
+static int ctable_lru_remove(struct page_cache* cache) {
+    infof("ctable_lru_remove");
+    for (int i = 0; i < NCACHE; i++) {
+        if (ctable.lru[i] == cache) {
+            for (int j = i; j < NCACHE - 1; j++) {
+                ctable.lru[j] = ctable.lru[j+1];
+            }
+            ctable.lru[NCACHE - 1] = NULL;
+            return 0;
+        }
+    }
+    infof("ctable_lru_remove: cache not found");
+    return -1;
+}
+
+static int ctable_lru_adjust(struct page_cache* cache) {
+    infof("ctable_lru_adjust");
+    for (int i = 0; i < NCACHE; i++) {
+        if (ctable.lru[i] == cache) {
+            for (int j = i; j > 0; j--) {
+                ctable.lru[j] = ctable.lru[j-1];
+            }
+            ctable.lru[0] = cache;
+            return 0;
+        }
+    }
+    infof("ctable_lru_adjust: cache not found");
+    return -1;
+}
+
+static struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
+    infof("ctable_acquire, ip: %p, offset: %d", ip, offset);
+    KERNEL_ASSERT(ip != NULL, "inode is NULL");
+    KERNEL_ASSERT((offset & (PGSIZE - 1)) == 0, "offset is not aligned");
+
+    struct page_cache* cache;
+
+    acquire_mutex_sleep(&ctable.lock);
+    // reuse cache if it is already in the cache
+    for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
+        acquire_mutex_sleep(&cache->lock);
+        if (cache->valid && cache->host == ip && cache->offset == offset) {
+            infof("reuse cache");
+            ctable_lru_adjust(cache);
+            idup(ip);
+            release_mutex_sleep(&ctable.lock);
+            return cache;
+        }
+        release_mutex_sleep(&cache->lock);
+    }
+    // if not, find an empty cache
+    int first_chance = 1;
+find_again:
+    for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
+        acquire_mutex_sleep(&cache->lock);
+        if (!cache->valid) {
+            infof("create cache");
+            cache->host = ip;
+            cache->offset = offset;
+            cache->valid = TRUE;
+            cache->dirty = FALSE;
+            cache->page = alloc_physical_page();
+            release_mutex_sleep(&ctable.lock);
+            goto read_page;
+        }
+        release_mutex_sleep(&cache->lock);
+    }
+    if (first_chance) {
+        first_chance = 0;
+        ctable_lru_evict();
+        goto find_again;
+    } else {
+        release_mutex_sleep(&ctable.lock);
+        infof("ctable_acquire: no free space");
+        return NULL;
+    }
+
+read_page:
+    if (f_lseek(&ip->file, offset) != FR_OK) {
+        infof("ctable_acquire: invalid offset");
+        goto read_page_err;
+    }
+
+    UINT size;
+    if (f_read(&ip->file, cache->page, PAGE_SIZE, &size) != FR_OK || size == 0) {
+        infof("ctable_acquire: read error");
+        goto read_page_err;
+    }
+
+    idup(ip);
+    ctable_lru_add(cache);
+    return cache;
+
+read_page_err:
+    cache->host = NULL;
+    cache->offset = 0;
+    cache->valid = FALSE;
+    cache->dirty = FALSE;
+    recycle_physical_page(cache->page);
+    cache->page = NULL;
+    release_mutex_sleep(&cache->lock);
+    return NULL;
+}
+
+static int cache_writeback(struct page_cache* cache) {
+    infof("cache_writeback, cache: %p", cache);
+    KERNEL_ASSERT(cache != NULL, "cache is NULL");
+    KERNEL_ASSERT(cache->host != NULL, "cache->host is NULL");
+    KERNEL_ASSERT(cache->page != NULL, "cache->page is NULL");
+
+    if (f_lseek(&cache->host->file, cache->offset) != FR_OK) {
+        infof("cache_writeback: invalid offset");
+        return -1;
+    }
+    uint filesize = f_size(&cache->host->file);
+    uint n = MIN(filesize - cache->offset, PGSIZE);
+    if (f_write(&cache->host->file, cache->page, n, NULL) != FR_OK) {
+        infof("cache_writeback: write error");
+        return -1;
+    }
+    return 0;
+}
+
+//static int ctable_release(struct inode* ip, uint offset) {
+//    infof("ctable_release, ip: %p, offset: %d", ip, offset);
+//    KERNEL_ASSERT(ip != NULL, "inode is NULL");
+//    KERNEL_ASSERT((offset & (PGSIZE - 1)) == 0, "offset is not aligned");
+//
+//    struct page_cache* cache;
+//    acquire_mutex_sleep(&ctable.lock);
+//    for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
+//        acquire_mutex_sleep(&cache->lock);
+//        if (cache->valid && cache->host == ip && cache->offset == offset) {
+//            infof("release cache");
+//            if (cache->dirty && cache_writeback(cache) != 0) {
+//                panic("cache_writeback error");
+//            }
+//            cache->valid = FALSE;
+//            cache->host = NULL;
+//            cache->offset = 0;
+//            cache->dirty = FALSE;
+//            recycle_physical_page(cache->page);
+//            cache->page = NULL;
+//            release_mutex_sleep(&cache->lock);
+//            return 0;
+//        }
+//        release_mutex_sleep(&cache->lock);
+//    }
+//    infof("ctable_release: no cache matched");
+//    release_mutex_sleep(&ctable.lock);
+//    return -1;
+//}
+
+// when all processes are about to terminate, call this function to free all caches
+// so the disk can get all changes back to it
+void ctable_release_all() {
+    infof("ctable_release_all");
+    struct page_cache* cache;
+    acquire_mutex_sleep(&ctable.lock);
+    for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
+        acquire_mutex_sleep(&cache->lock);
+        if (cache->valid) {
+            // if dirty, write back to disk
+            if (cache->dirty && cache_writeback(cache) != 0) {
+                panic("cache_writeback error");
+            }
+
+            // release physical page
+            KERNEL_ASSERT(get_physical_page_ref(cache->page) == 1, "page ref is not 1");
+            recycle_physical_page(cache->page);
+
+            // dereference inode
+            iput(cache->host);
+
+            // clear the cache entry
+            memset(cache, 0, sizeof(struct page_cache));
+
+            // remove it from the lru list
+            ctable_lru_remove(cache);
+
+        }
+        release_mutex_sleep(&cache->lock);
+    }
+    release_mutex_sleep(&ctable.lock);
+}
+
+
 //static uint
 //bmap(struct inode *ip, uint bn);
 static
@@ -349,30 +590,41 @@ void iunlockput(struct inode *ip) {
 int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 
-    // seek to the right position
-    if (f_lseek(&ip->file, off) != FR_OK) {
+    // make sure the offset is valid
+    // file size == offset is not allowed in read operation
+    uint filesize = f_size(&ip->file);
+    if (filesize <= off) {
         return 0;
     }
-
-    uint total = 0;
-    // read data
-    if (!user_dst) {
-        // kernel address, read directly
-        if (f_read(&ip->file, dst, n, &total) != FR_OK) {
-            return 0;
-        }
-        return total;
-    } else {
-        // user address, copyout
-        char buf[n];
-        if (f_read(&ip->file, buf, n, &total) != FR_OK) {
-            return 0;
-        }
-        if (copyout(curr_proc()->pagetable, dst, buf, total) < 0) {
-            return 0;
-        }
-        return total;
+    // fix n by the file size
+    if (filesize < off + n) {
+        n = filesize - off;
     }
+
+    uint off_align;
+    uint64 data_align;
+    uint64 len = n;
+    while (len > 0) {
+        off_align = PGROUNDDOWN(off);
+        struct page_cache *cache = ctable_acquire(ip, off_align);
+        if (cache == NULL) {
+            return 0;
+        }
+        data_align = (uint64)cache->page;
+        n = PGSIZE - (off - off_align);
+        if (n > len) {
+            n = len;
+        }
+        if (either_copyout((char *)dst, (char *)data_align + (off - off_align), n, user_dst) == -1) {
+            release_mutex_sleep(&cache->lock);
+            return 0;
+        }
+        len -= n;
+        dst += n;
+        off = off_align + PGSIZE;
+        release_mutex_sleep(&cache->lock);
+    }
+    return n;
 }
 
 // Write data to inode.
@@ -416,30 +668,60 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
 int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 
-    // seek to the right position
-    if (f_lseek(&ip->file, off) != FR_OK) {
+    // expand file if necessary
+    if (off + n > f_size(&ip->file) && f_lseek(&ip->file, off + n) != FR_OK) {
         return 0;
     }
 
-    uint total = 0;
-    // read data
-    if (!user_src) {
-        // kernel address, write directly
-        if (f_write(&ip->file, src, n, &total) != FR_OK) {
+    uint off_align;
+    uint64 data_align;
+    uint64 len = n;
+    while (len > 0) {
+        off_align = PGROUNDDOWN(off);
+        struct page_cache *cache = ctable_acquire(ip, off_align);
+        if (cache == NULL) {
             return 0;
         }
-        return total;
-    } else {
-        // user address, copyin
-        char buf[n];
-        if (copyin(curr_proc()->pagetable, buf, src, n) < 0) {
+        data_align = (uint64)cache->page;
+        n = PGSIZE - (off - off_align);
+        if (n > len) {
+            n = len;
+        }
+        if (either_copyin((char *)data_align + (off - off_align), (char *)src, n, user_src) == -1) {
+            release_mutex_sleep(&cache->lock);
             return 0;
         }
-        if (f_write(&ip->file, buf, n, &total) != FR_OK) {
-            return 0;
-        }
-        return total;
+        len -= n;
+        src += n;
+        off = off_align + PGSIZE;
+        cache->dirty = TRUE;
+        release_mutex_sleep(&cache->lock);
     }
+    return n;
+//    // seek to the right position
+//    if (f_lseek(&ip->file, off) != FR_OK) {
+//        return 0;
+//    }
+//
+//    uint total = 0;
+//    // read data
+//    if (!user_src) {
+//        // kernel address, write directly
+//        if (f_write(&ip->file, src, n, &total) != FR_OK) {
+//            return 0;
+//        }
+//        return total;
+//    } else {
+//        // user address, copyin
+//        char buf[n];
+//        if (copyin(curr_proc()->pagetable, buf, src, n) < 0) {
+//            return 0;
+//        }
+//        if (f_write(&ip->file, buf, n, &total) != FR_OK) {
+//            return 0;
+//        }
+//        return total;
+//    }
 }
 
 

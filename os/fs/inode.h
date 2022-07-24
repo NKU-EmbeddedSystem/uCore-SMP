@@ -26,6 +26,16 @@ struct inode {
     char path[MAXPATH]; // absolute path
 };
 
+struct page_cache {
+    struct mutex lock;
+    struct inode *host;
+    uint offset;
+    uint dirty;
+    uint valid;
+    void *page;
+    uint map_cnt;
+};
+
 struct device {
     int magic;
     int major;
