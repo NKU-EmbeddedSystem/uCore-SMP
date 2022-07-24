@@ -92,7 +92,7 @@ static int ctable_lru_adjust(struct page_cache* cache) {
     return -1;
 }
 
-static struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
+struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
     infof("ctable_acquire, ip: %p, offset: %d", ip, offset);
     KERNEL_ASSERT(ip != NULL, "inode is NULL");
     KERNEL_ASSERT((offset & (PGSIZE - 1)) == 0, "offset is not aligned");
@@ -124,6 +124,7 @@ find_again:
             cache->valid = TRUE;
             cache->dirty = FALSE;
             cache->page = alloc_physical_page();
+            memset(cache->page, 0, PGSIZE);
             release_mutex_sleep(&ctable.lock);
             goto read_page;
         }
@@ -178,7 +179,8 @@ static int cache_writeback(struct page_cache* cache) {
     }
     uint filesize = f_size(&cache->host->file);
     uint n = MIN(filesize - cache->offset, PGSIZE);
-    if (f_write(&cache->host->file, cache->page, n, NULL) != FR_OK) {
+    uint writesize;
+    if (f_write(&cache->host->file, cache->page, n, &writesize) != FR_OK || writesize != n) {
         infof("cache_writeback: write error");
         return -1;
     }
@@ -246,6 +248,13 @@ void ctable_release_all() {
         release_mutex_sleep(&cache->lock);
     }
     release_mutex_sleep(&ctable.lock);
+}
+
+static void cache_table_init() {
+    init_mutex(&ctable.lock);
+    for (int i = 0; i < NCACHE; i++) {
+        init_mutex(&ctable.cache[i].lock);
+    }
 }
 
 
@@ -384,6 +393,7 @@ void inode_table_init() {
     for (int i = 0; i < NINODE; i++) {
         init_mutex(&itable.inode[i].lock);
     }
+    cache_table_init();
 }
 
 // Copy a modified in-memory inode to disk.

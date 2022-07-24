@@ -33,7 +33,6 @@ struct page_cache {
     uint dirty;
     uint valid;
     void *page;
-    uint map_cnt;
 };
 
 struct device {
