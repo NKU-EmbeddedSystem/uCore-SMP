@@ -42,6 +42,8 @@ char *syscall_names(int id)
         return "SYS_read";
     case SYS_write:
         return "SYS_write";
+    case SYS_writev:
+        return "SYS_writev";
     case SYS_fstat:
         return "SYS_fstat";
     case SYS_exit:
@@ -108,7 +110,7 @@ void syscall()
     uint64 args[7] = {trapframe->a0, trapframe->a1, trapframe->a2, trapframe->a3, trapframe->a4, trapframe->a5, trapframe->a6};
     
     // ignore read and write so that shell command don't get interrupted
-    if (id != SYS_write && id != SYS_read)
+    if (id != SYS_write && id != SYS_writev && id != SYS_read)
     {
         char *name=syscall_names(id);
         (void) name;
@@ -118,6 +120,9 @@ void syscall()
     switch (id) {
     case SYS_write:
         ret = sys_write(args[0], (void *)args[1], args[2]);
+        break;
+    case SYS_writev:
+        ret = sys_writev(args[0], (struct iovec *)args[1], args[2]);
         break;
     case SYS_read:
         ret = sys_read(args[0], (void *)args[1], args[2]);
@@ -224,7 +229,7 @@ void syscall()
     }
     if(id != SYS_execve)
         trapframe->a0 = ret; // return value
-    if (id != SYS_write && id != SYS_read)
+    if (id != SYS_write && id != SYS_writev && id != SYS_read)
     {
         tracecore("syscall %d ret %l", (int)id, ret);
     }

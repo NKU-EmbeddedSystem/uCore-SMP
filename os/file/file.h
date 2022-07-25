@@ -47,6 +47,11 @@ struct file {
     short major;       // FD_DEVICE
 };
 
+struct iovec {
+    uint64 iov_base;
+    uint64 iov_len;
+};
+
 // typedef char mail_t[256];
 // #define MAX_MAIL_IN_BOX (16)
 // struct mailbox {

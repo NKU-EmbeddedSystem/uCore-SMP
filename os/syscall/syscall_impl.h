@@ -17,6 +17,8 @@ struct timeval;
 
 struct timezone;
 
+struct iovec;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -86,6 +88,8 @@ int sys_brk(void* addr);
 void *sys_mmap(void *start, size_t len, int prot, int flags, int fd, long off);
 
 int sys_munmap(void *start, size_t len);
+
+int sys_writev(int fd, struct iovec *iov, int iovcnt);
 
 int sys_dummy_success(void);
 
