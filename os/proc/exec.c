@@ -2,6 +2,8 @@
 #include <trap/trap.h>
 #include <utils/log.h>
 
+#define AUX_CNT 38
+
 static void debug_print_args(char *name, int argc, const char **argv) {
     tracecore("exec name=%s, argc=%d", name, argc);
     for (int i = 0; i < argc; i++) {
@@ -30,7 +32,9 @@ int exec(char *name, int argc, const char **argv, int envc, const char **envp) {
 //    }
 
 //    loader(id, p);
-    if (elf_loader(name ,p) < 0) {
+    struct auxv_t auxv[AUX_CNT];
+    int auxc;
+    if (elf_loader(name, p, auxv, &auxc) < 0) {
         return -1;
     }
     safestrcpy(p->name, name, PROC_NAME_MAX);
@@ -69,21 +73,25 @@ int exec(char *name, int argc, const char **argv, int envc, const char **envp) {
     }
 
     // copy argv and envp pointer array to user stack
-    sp_pa -= (argc + envc + 2 + 2) * sizeof(const char *);           // alloc space for argv and envp, the last ptr is NULL
+    sp_pa -= (argc + envc + 2 + (auxc + 1) * 2) * sizeof(const char *);           // alloc space for argv, envp and auxv, the last ptr is NULL
     const char **argv_start = (const char **)sp_pa; // user main()'s argv value (physical here)
     const char **envp_start = (const char **)sp_pa + argc + 1;
+    struct auxv_t * const auxv_start = (struct auxv_t * const)((const char **)sp_pa + argc + envc + 2);
     for (int i = 0; i < argc; i++) {
         argv_start[i] = argv[i];
     }
     argv_start[argc] = NULL;
+
     for (int i = 0; i < envc; i++) {
         envp_start[i] = envp[i];
     }
     envp_start[envc] = NULL;
 
     // auxv
-    envp_start[envc + 1] = NULL;
-    envp_start[envc + 2] = NULL;
+    for (int i = 0; i < auxc; i++) {
+        auxv_start[i] = auxv[i];
+    }
+    auxv_start[auxc] = (struct auxv_t){0, 0};
 
     // construct argc in stack
     // notice: according to "_start" entry, this is not 8 byte aligned

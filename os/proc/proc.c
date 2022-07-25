@@ -573,6 +573,7 @@ static bool is_free_range(pagetable_t pagetable, uint64 start, uint npages) {
 }
 
 static void *get_free_range(pagetable_t pagetable, uint npages, uint64 hint_address) {
+    infof("get_free_range: npages: %d, hint_address: %p", npages, hint_address);
     uint64 va;
     if (hint_address) {
         for (va = hint_address; va <= USER_STACK_BOTTOM - USTACK_SIZE - (npages + 1) * PGSIZE; va += PGSIZE) {
@@ -641,7 +642,7 @@ static int mapping_remove(struct proc *p, uint64 va, uint npages) {
 }
 
 
-void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct inode *ip, off_t off){
+void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct inode *ip, off_t off) {
     if (p->maps[MAX_MAPPING - 1].va != 0) {
         infof("sys_mmap: too many mappings");
         return MAP_FAILED;

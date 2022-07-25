@@ -48,14 +48,49 @@ struct proghdr {
 };
 
 // Values for Proghdr type
-#define ELF_PROG_LOAD           1
-#define ELF_PROG_GNU_STACK      0x6474E551
-#define ELF_PROG_GNU_RELRO      0x6474E552
+#define PT_NULL    0
+#define PT_LOAD    1
+#define PT_DYNAMIC 2
+#define PT_INTERP  3
+#define PT_GNU_STACK      0x6474E551
+#define PT_GNU_RELRO      0x6474E552
+
+// elf file types
+#define ET_EXEC   2
+#define ET_DYN    3
 
 // Flag bits for Proghdr flags
 #define ELF_PROG_FLAG_EXEC      1
 #define ELF_PROG_FLAG_WRITE     2
 #define ELF_PROG_FLAG_READ      4
+
+// for auxv
+#define AT_NULL         0               /* End of vector */
+#define AT_IGNORE       1               /* Entry should be ignored */
+#define AT_EXECFD       2               /* File descriptor of program */
+#define AT_PHDR         3               /* Program headers for program */
+#define AT_PHENT        4               /* Size of program header entry */
+#define AT_PHNUM        5               /* Number of program headers */
+#define AT_PAGESZ       6               /* System page size */
+#define AT_BASE         7               /* Base address of interpreter */
+#define AT_FLAGS        8               /* Flags */
+#define AT_ENTRY        9               /* Entry point of program */
+#define AT_NOTELF       10              /* Program is not ELF */
+#define AT_UID          11              /* Real uid */
+#define AT_EUID         12              /* Effective uid */
+#define AT_GID          13              /* Real gid */
+#define AT_EGID         14              /* Effective gid */
+#define AT_CLKTCK       17              /* Frequency of times() */
+/* Pointer to the global system page used for system calls and other nice things.  */
+#define AT_SYSINFO      32
+#define AT_SYSINFO_EHDR 33
+
+#define ADD_AUXV(auxv, t, v) \
+    do { \
+        (auxv)->type = (t); \
+        (auxv)->val = (v); \
+        (auxv)++; \
+    } while (0)
 
 
 void init_app_names()
@@ -214,48 +249,48 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *inode, uint offset, uint
     return 0;
 }
 
-static int
-cleanseg(pagetable_t pagetable, uint64 va, uint sz)
-{
-    uint64 i;
-    uint64 pa_align, pa;
-    uint64 va_align, va_begin, va_end, copy_size, temp_size = 0;
-
-    // prefix part
-    va_align = PGROUNDDOWN(va);
-    va_begin = va;
-    va_end = MIN(PGROUNDUP(va), va_begin + sz);
-    if (va_begin != va_end) {
-        pa_align = walkaddr(pagetable, va_align);
-        if (pa_align == NULL) {
-            panic("cleanseg: address should exist");
-        }
-        pa = pa_align + (va_begin - va_align);
-        copy_size = va_end - va_begin;
-        infof("cleanseg: clean prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
-        memset((void*)pa, 0, copy_size);
-        temp_size += copy_size;
-    }
-    if (temp_size == sz) {
-        return 0;
-    }
-
-    // middle part and suffix part
-    va_begin = PGROUNDUP(va);
-    va_end = va + sz;
-    for (i = va_begin; i < va_end; i += PGSIZE) {
-        pa = walkaddr(pagetable, i);
-        if (pa == NULL) {
-            panic("cleanseg: address should exist");
-        }
-        copy_size = MIN(PGSIZE, va_end - i);
-        infof("cleanseg: clean middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
-        memset((void*)pa, 0, copy_size);
-        temp_size += copy_size;
-    }
-
-    return 0;
-}
+//static int
+//cleanseg(pagetable_t pagetable, uint64 va, uint sz)
+//{
+//    uint64 i;
+//    uint64 pa_align, pa;
+//    uint64 va_align, va_begin, va_end, copy_size, temp_size = 0;
+//
+//    // prefix part
+//    va_align = PGROUNDDOWN(va);
+//    va_begin = va;
+//    va_end = MIN(PGROUNDUP(va), va_begin + sz);
+//    if (va_begin != va_end) {
+//        pa_align = walkaddr(pagetable, va_align);
+//        if (pa_align == NULL) {
+//            panic("cleanseg: address should exist");
+//        }
+//        pa = pa_align + (va_begin - va_align);
+//        copy_size = va_end - va_begin;
+//        infof("cleanseg: clean prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
+//        memset((void*)pa, 0, copy_size);
+//        temp_size += copy_size;
+//    }
+//    if (temp_size == sz) {
+//        return 0;
+//    }
+//
+//    // middle part and suffix part
+//    va_begin = PGROUNDUP(va);
+//    va_end = va + sz;
+//    for (i = va_begin; i < va_end; i += PGSIZE) {
+//        pa = walkaddr(pagetable, i);
+//        if (pa == NULL) {
+//            panic("cleanseg: address should exist");
+//        }
+//        copy_size = MIN(PGSIZE, va_end - i);
+//        infof("cleanseg: clean middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
+//        memset((void*)pa, 0, copy_size);
+//        temp_size += copy_size;
+//    }
+//
+//    return 0;
+//}
 
 static void print_proghdr(struct proghdr *ph)
 {
@@ -270,36 +305,117 @@ static void print_proghdr(struct proghdr *ph)
     printf("\n");
 }
 
-int elf_loader(char* name, struct proc *p) {
-    infof("elf_loader %s", name);
-
-    struct inode* inode = inode_by_name(name);
-    if (inode == NULL) {
-        infof("elf_loader inode_by_name failed");
-        return -1;
-    }
-
-    ilock(inode);
-
-    struct elfhdr elf;
-    struct proghdr ph;
-    int i, off;
-    uint64 pos = USER_TEXT_START;
+int loadelf(struct proc *p, struct inode *ip, struct elfhdr *ehdr, uint64 *base, uint *npages) {
 
     // Check ELF header
-    if (readi(inode, FALSE, &elf, 0, sizeof(elf)) != sizeof(elf)) {
+    if (readi(ip, FALSE, ehdr, 0, sizeof(struct elfhdr)) != sizeof(struct elfhdr)) {
         infof("elf_loader read elf header failed");
-        iunlockput(inode);
         return -1;
     }
-    if (elf.magic != ELF_MAGIC) {
+    if (ehdr->magic != ELF_MAGIC) {
         infof("elf_loader invalid elf magic");
-        iunlockput(inode);
         return -1;
     }
-    if (elf.phnum == 0) {
+    if (ehdr->phnum == 0) {
         infof("elf_loader no program header");
-        iunlockput(inode);
+        return -1;
+    }
+    bool is_dyn = ehdr->type == ET_DYN;
+
+    // calculate load range
+    uint64 min_va = 0xffffffffffffffff;
+    uint64 max_va = 0;
+    struct proghdr phdr;
+    for (uint64 i = 0; i < ehdr->phnum; i++) {
+        if (readi(ip, FALSE, &phdr, ehdr->phoff + i * sizeof(struct proghdr), sizeof(struct proghdr)) != sizeof(struct proghdr)) {
+            infof("elf_loader read program header failed");
+            return -1;
+        }
+        if (phdr.type != PT_LOAD) {
+            continue;
+        }
+        min_va = MIN(min_va, phdr.vaddr);
+        max_va = MAX(max_va, phdr.vaddr + phdr.memsz);
+    }
+    min_va = PGROUNDDOWN(min_va);
+    max_va = PGROUNDUP(max_va);
+    infof("elf_loader min_va: %p, max_va: %p, len: %d", min_va, max_va, max_va - min_va);
+
+    // allocate memory
+    uint64 map_base = 0;
+    if (!is_dyn) {
+        if (uvmalloc(p->pagetable, USER_TEXT_START, max_va) != max_va) {
+            infof("elf_loader uvmalloc failed");
+            return -1;
+        }
+        map_base = min_va;
+    } else {
+        map_base = (uint64)mmap(p, NULL, max_va - min_va, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, NULL, 0);
+        if ((void *)map_base == MAP_FAILED) {
+            infof("elf_loader mmap failed");
+            return -1;
+        }
+    }
+
+    // load segments into memory
+    for (uint64 i = 0; i < ehdr->phnum; i++) {
+        if (readi(ip, FALSE, &phdr, ehdr->phoff + i * sizeof(struct proghdr), sizeof(struct proghdr)) != sizeof(struct proghdr)) {
+            infof("elf_loader read program header failed");
+            return -1;
+        }
+        if (phdr.type != PT_LOAD) {
+            continue;
+        }
+        uint64 loadva = phdr.vaddr + (map_base - min_va);
+        if (loadseg(p->pagetable, loadva, ip, phdr.off, phdr.filesz) < 0) {
+            infof("elf_loader loadseg failed");
+            return -1;
+        }
+    }
+
+    // fill output info
+    *base = map_base;
+    *npages = (max_va - min_va) / PGSIZE;
+    return 0;
+}
+
+int get_interp(struct inode *ip, char *path) {
+
+    // read elf header
+    struct elfhdr ehdr;
+    if (readi(ip, FALSE, &ehdr, 0, sizeof(struct elfhdr)) != sizeof(struct elfhdr)) {
+        infof("elf_loader read elf header failed");
+        return -1;
+    }
+
+    // try to find interpreter
+    struct proghdr phdr;
+    for (uint64 i = 0; i < ehdr.phnum; i++) {
+        if (readi(ip, FALSE, &phdr, ehdr.phoff + i * sizeof(struct proghdr), sizeof(struct proghdr)) != sizeof(struct proghdr)) {
+            infof("elf_loader read program header failed");
+            return -1;
+        }
+        if (phdr.type != PT_INTERP) {
+            continue;
+        }
+        if (readi(ip, FALSE, path, phdr.off, phdr.filesz) != phdr.filesz) {
+            infof("elf_loader read interpreter path failed");
+            return -1;
+        }
+        path[phdr.filesz] = '\0';
+        return 0;
+    }
+
+    // interpreter not found
+    return -1;
+}
+
+int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
+    infof("elf_loader %s", name);
+
+    struct inode* ip = inode_by_name(name);
+    if (ip == NULL) {
+        infof("elf_loader inode_by_name exec failed");
         return -1;
     }
 
@@ -311,39 +427,57 @@ int elf_loader(char* name, struct proc *p) {
     // can't revoke the modification from here because the old page table is freed,
     // so we must use panic.
 
-    for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
-        if(readi(inode, FALSE, &ph, off, sizeof(ph)) != sizeof(ph)) {
-            panic("elf_loader loop readi");
-        }
-//        print_proghdr(&ph);
-        if (ph.type != ELF_PROG_LOAD) {
-            continue;
-        }
-        if (ph.memsz < ph.filesz) {
-            panic("elf_loader loop memsz 1");
-        }
-        if (ph.vaddr + ph.memsz < ph.vaddr) {
-            panic("elf_loader loop memsz 2");
-        }
-        if ((pos = uvmalloc(p->pagetable, pos, ph.vaddr + ph.memsz)) == 0)
-            panic("elf_loader loop uvmalloc");
-        infof("elf_loader loop vaddr range %p-%p", ph.vaddr, ph.vaddr + ph.memsz);
-        if (loadseg(p->pagetable, ph.vaddr, inode, ph.off, ph.filesz) < 0)
-            panic("elf_loader loop loadseg");
-//        if (ph.memsz - ph.filesz > 0 &&
-//            cleanseg(p->pagetable, ph.vaddr + ph.filesz, ph.memsz - ph.filesz) < 0)
-//            panic("elf_loader loop cleanseg");
+    ilock(ip);
+
+    struct elfhdr ehdr[2];
+    uint64 base[2];
+    uint npages[2];
+
+    // load exec
+    if (loadelf(p, ip, &ehdr[0], &base[0], &npages[0]) < 0) {
+        panic("elf_loader loadelf exec failed");
     }
 
-    iunlockput(inode);
+    // find interpreter and load it if exists
+    bool has_interp = FALSE;
+    char interp_path[MAXPATH];
+    if (get_interp(ip, interp_path) == 0) {
+        has_interp = TRUE;
+        struct inode* interp_ip = inode_by_name(interp_path);
+        if (interp_ip == NULL) {
+            panic("elf_loader inode_by_name dyn failed");
+        }
+        ilock(interp_ip);
+        if (loadelf(p, interp_ip, &ehdr[1], &base[1], &npages[1]) < 0) {
+            panic("elf_loader loadelf dyn failed");
+        }
+        iunlockput(interp_ip);
+    }
 
-    p->trapframe->epc = elf.entry;
-    infof("elf_loader epc %p\n", elf.entry);
+    iunlockput(ip);
+
+    // fill auxv info
+    struct auxv_t *auxv_base = auxv;
+    ADD_AUXV(auxv, AT_PHDR, base[0] + ehdr[0].phoff);
+    ADD_AUXV(auxv, AT_PHENT, sizeof(struct proghdr));
+    ADD_AUXV(auxv, AT_PHNUM, ehdr[0].phnum);
+    ADD_AUXV(auxv, AT_PAGESZ, PGSIZE);
+    ADD_AUXV(auxv, AT_ENTRY, ehdr[0].entry);
+    if (has_interp) {
+        ADD_AUXV(auxv, AT_BASE, base[1]); // record interpreter base
+    }
+    *auxc = auxv - auxv_base;
+    infof("elf_loader auxc %d", *auxc);
+
+    uint64 entry = has_interp ? base[1] + ehdr[1].entry : ehdr[0].entry;
+    p->trapframe->epc = entry;
+    infof("elf_loader epc %p", entry);
     alloc_ustack(p);
     p->next_shmem_addr = (void*) p->ustack_bottom+PGSIZE;
-    p->total_size = USTACK_SIZE + (pos - USER_TEXT_START);
-    p->heap_start = pos;
-    infof("elf_loader total_size %p\n", p->total_size);
+    uint64 edata = base[0] + npages[0] * PGSIZE;
+    p->total_size = USTACK_SIZE + (edata - USER_TEXT_START);
+    p->heap_start = edata;
+    infof("elf_loader total_size %p", p->total_size);
     return 0;
 }
 

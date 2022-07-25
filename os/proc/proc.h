@@ -80,6 +80,11 @@ enum procstate {
     ZOMBIE
 };
 
+struct auxv_t {
+    uint64 type;
+    uint64 val;
+};
+
 struct mapping {
     uint64 va; // must be PGSIZE aligned
     uint npages;

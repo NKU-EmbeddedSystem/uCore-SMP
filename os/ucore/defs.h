@@ -9,6 +9,7 @@ struct pipe;
 struct superblock;
 struct inode;
 struct buf;
+struct auxv_t;
 
 // panic.c
 void loop();
@@ -56,7 +57,7 @@ void init_app_names();
 int make_shell_proc();
 int get_app_id_by_name(char *name);
 void loader(int, struct proc *);
-int elf_loader(char*, struct proc *);
+int elf_loader(char*, struct proc *, struct auxv_t *, int *);
 
 // proc.c
 struct proc *curr_proc();
