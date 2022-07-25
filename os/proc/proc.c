@@ -562,7 +562,7 @@ static bool is_free_range(pagetable_t pagetable, uint64 start, uint npages) {
     uint64 va;
     pte_t *pte;
     for (va = start; va < start + npages * PGSIZE; va += PGSIZE) {
-        if ((pte = walk(pagetable, va, FALSE)) == 0) {
+        if ((pte = walk(pagetable, va, TRUE)) == 0) {
             return FALSE;
         }
         if ((*pte & PTE_V) != 0) {
@@ -703,6 +703,7 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
                 infof("sys_mmap: no free physical page");
                 goto free_pages;
             }
+            memset(pa, 0, PGSIZE);
             pa_arr[i] = pa;
         }
     } else {
