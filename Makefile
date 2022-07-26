@@ -1,5 +1,5 @@
 .PHONY: clean build_kernel all user doc
-all: build_kernel
+all: user build_kernel copy_bin
 
 U = user
 K = os
@@ -87,7 +87,7 @@ build/kernel: $(OBJS) os/kernel_app.ld os/link_app.S
 	@echo 'Build kernel done'
 
 clean: 
-	rm -rf $(BUILDDIR) nfs/fs os/kernel_app.ld os/link_app.S
+	rm -rf $(BUILDDIR) nfs/fs os/kernel_app.ld os/link_app.S os.bin
 
 # BOARD
 BOARD		?= qemu
@@ -125,3 +125,6 @@ user:
 
 doc:
 	make -C doc
+
+copy_bin:
+	cp $(BUILDDIR)/ucore os.bin
