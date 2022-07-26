@@ -50,8 +50,10 @@ void init_booted() {
 
 extern char _entry[];
 void main(uint64 hartid, uint64 a1) {
+    int boot_hart;
     if (first_hart) {
         w_tp(hartid);
+        boot_hart = hartid;
         first_hart = FALSE;
         printf_k("\n");
         printf_k("[ucore] Boot hartid=%d\n", hartid);
@@ -118,7 +120,7 @@ void main(uint64 hartid, uint64 a1) {
     scheduler();
     debugf("halt");
     halt();
-    if (cpuid() == 0) {
+    if (cpuid() == boot_hart) {
         debugcore("wait other halt");
         wait_all_halt();
         printf("[ucore] All finished. Shutdown ...\n");
