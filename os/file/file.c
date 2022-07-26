@@ -191,7 +191,7 @@ int fileopen(char *path, int flags) {
         // find inode by name
         if ((ip = inode_by_name(path)) == NULL) {
             infof("Cannot find inode with name %s", path);
-            return -1;
+            return -2;
         }
         // the inode is found
         ilock(ip);
