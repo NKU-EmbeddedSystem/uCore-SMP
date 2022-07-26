@@ -96,6 +96,8 @@ char *syscall_names(int id)
         return "SYS_rt_sigtimedwait";
     case SYS_prlimit64:
         return "SYS_prlimit64";
+    case SYS_mprotect:
+        return "SYS_mprotect";
     default:
         return "?";
     }
@@ -221,6 +223,9 @@ void syscall()
         ret = sys_dummy_success();
         break;
     case SYS_prlimit64:
+        ret = sys_dummy_success();
+        break;
+    case SYS_mprotect:
         ret = sys_dummy_success();
         break;
     default:
