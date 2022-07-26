@@ -481,7 +481,7 @@ void *sys_mmap(void *start, size_t len, int prot, int flags, int fd, off_t off) 
             infof("sys_mmap: fd is not a file");
             return MAP_FAILED;
         }
-        if ((prot & PROT_WRITE) && !f->writable) {
+        if ((prot & PROT_WRITE) && !f->writable && (flags & MAP_SHARED)) {
             infof("sys_mmap: file is not writable");
             return MAP_FAILED;
         }

@@ -620,7 +620,7 @@ static int mapping_add(struct proc *p, uint64 va, uint npages, bool shared) {
     return 0;
 }
 
-static int mapping_remove(struct proc *p, uint64 va, uint npages) {
+static int mapping_remove_fixed(struct proc *p, uint64 va, uint npages) {
     // find the mapping
     int i;
     for (i = 0; i < MAX_MAPPING; i++) {
@@ -641,6 +641,45 @@ static int mapping_remove(struct proc *p, uint64 va, uint npages) {
     return 0;
 }
 
+static int mapping_try_remove_page(struct proc *p, uint64 check_va) {
+    KERNEL_ASSERT(check_va % PGSIZE == 0, "mapping_get_range: check_va is not page aligned");
+    uint64 left_va, right_va;
+    uint left_npages, right_npages;
+
+    // find a entry contains check_va
+    int i;
+    uint64 begin, end;
+    bool shared;
+    for (i = 0; i < MAX_MAPPING; i++) {
+        begin = p->maps[i].va;
+        end = begin + p->maps[i].npages * PGSIZE;
+        shared = p->maps[i].shared;
+        if (check_va >= begin && check_va < end) {
+            goto range_found;
+        }
+    }
+    // not found
+    return -1;
+
+range_found:
+    left_va = begin;
+    left_npages = (check_va - begin) / PGSIZE;
+    right_va = check_va + PGSIZE;
+    right_npages = (end - right_va) / PGSIZE;
+
+    // remove the mapping
+    if (mapping_remove_fixed(p, begin, (end - begin) / PGSIZE) < 0) {
+        panic("mapping_try_remove_page: mapping_remove_fixed failed");
+    }
+    // add the left and right mappings
+    if (left_npages > 0 && mapping_add(p, left_va, left_npages, shared) < 0) {
+        panic("mapping_try_remove_page: mapping_add left failed");
+    }
+    if (right_npages > 0 && mapping_add(p, right_va, right_npages, shared) < 0) {
+        panic("mapping_try_remove_page: mapping_add right failed");
+    }
+    return 0;
+}
 
 void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct inode *ip, off_t off) {
     if (p->maps[MAX_MAPPING - 1].va != 0) {
@@ -669,8 +708,17 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
         }
 
         if (!is_free_range(p->pagetable, (uint64)start, npages)) {
-            infof("MAP_FIXED: start is not free");
-            return MAP_FAILED;
+            // try to remove existing mapping overlapping with the new one
+            for (uint64 va = (uint64)start; va < (uint64)start + npages * PGSIZE; va += PGSIZE) {
+                if (mapping_try_remove_page(p, va) == 0) {
+                    uvmunmap(p->pagetable, va, 1, TRUE);
+                }
+            }
+            // check again
+            if (!is_free_range(p->pagetable, (uint64)start, npages)) {
+                infof("MAP_FIXED: start is not free");
+                return MAP_FAILED;
+            }
         }
     } else {
         start = get_free_range(p->pagetable, npages, PGROUNDUP((uint64)start));
@@ -709,8 +757,8 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
         }
     } else {
         if (PGROUNDUP(f_size(&ip->file)) < off + len) {
-            infof("sys_mmap: file is too small");
-            return MAP_FAILED;
+            infof("sys_mmap: file is too small, so expand it");
+            f_lseek(&ip->file, off + len);
         }
         struct page_cache *cache;
         void *pa;
@@ -768,11 +816,13 @@ int munmap(struct proc *p, void *start, size_t len) {
     len = PGROUNDUP(len);
     uint npages = len / PGSIZE;
 
-    if (mapping_remove(p, (uint64)start, npages) < 0) {
-        infof("sys_munmap: not found");
-        return -1;
+    bool removed = FALSE;
+    for (uint64 va = (uint64)start; va < (uint64)start + npages * PGSIZE; va += PGSIZE) {
+        if (mapping_try_remove_page(p, va) == 0) {
+            removed = TRUE;
+            uvmunmap(p->pagetable, va, 1, TRUE);
+        }
     }
 
-    uvmunmap(p->pagetable, (uint64)start, npages, TRUE);
-    return 0;
+    return removed ? 0 : -1;
 }
