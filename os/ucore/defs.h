@@ -155,7 +155,7 @@ void iupdate(struct inode *);
 struct inode *inode_by_name(char *);
 struct inode *root_dir();
 struct page_cache* ctable_acquire(struct inode* ip, uint offset);
-void ctable_release_all();
+void ctable_release(struct inode *ip);
 
 void itrunc(struct inode *);
 

@@ -383,6 +383,77 @@ int sys_openat(int dirfd, char *filename, int flags, int mode) {
     return fileopenat(dirfd, path, flags);
 }
 
+int sys_linkat(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags) {
+    debugcore("sys_linkat");
+    if (flags != 0) {
+        infof("sys_linkat: flags=%d not support", flags);
+        return -1;
+    }
+    struct proc *p = curr_proc();
+    char old[MAXPATH];
+    char new[MAXPATH];
+    copyinstr(p->pagetable, old, (uint64)oldpath, MAXPATH);
+    copyinstr(p->pagetable, new, (uint64)newpath, MAXPATH);
+
+    int oldfd = -1, newfd = -1, ret;
+    oldfd = fileopenat(olddirfd, old, O_RDONLY);
+    if (oldfd < 0) {
+        infof("sys_linkat: open old %s failed", old);
+        ret = -1;
+        goto end;
+    }
+    newfd = fileopenat(newdirfd, new, O_WRONLY | O_CREATE);
+    if (newfd < 0) {
+        infof("sys_linkat: open new %s failed", new);
+        ret = -1;
+        goto end;
+    }
+
+    struct file * file_old = get_proc_file_by_fd(p, oldfd);
+    struct file * file_new = get_proc_file_by_fd(p, newfd);
+    KERNEL_ASSERT(file_old != NULL && file_new != NULL, "sys_linkat: file is NULL, data is corrupted");
+
+    ret = filelink(file_old, file_new);
+
+end:
+    if (oldfd >= 0) {
+        sys_close(oldfd);
+    }
+    if (newfd >= 0) {
+        sys_close(newfd);
+    }
+    return ret;
+}
+
+int sys_unlinkat(int dirfd, char *pathname, int flags) {
+    debugcore("sys_unlinkat");
+    if (flags != 0) {
+        infof("sys_unlinkat: flags=%d not support", flags);
+        return -1;
+    }
+    struct proc *p = curr_proc();
+    char path[MAXPATH];
+    copyinstr(p->pagetable, path, (uint64)pathname, MAXPATH);
+
+    int fd = fileopenat(dirfd, path, O_RDONLY);
+    if (fd < 0) {
+        infof("sys_unlinkat: open %s failed", path);
+        return -1;
+    }
+
+    struct file * file = get_proc_file_by_fd(p, fd);
+    KERNEL_ASSERT(file != NULL, "sys_unlinkat: file is NULL, data is corrupted");
+
+    int ret = fileunlink(file);
+
+    // because the inode of the file is closed by fileunlink, so we don't need to clean up inode
+    // just clear the file structure and proc->files[fd] is ok
+    p->files[fd] = NULL;
+    fileclear(file);
+
+    return ret;
+}
+
 //int64 sys_mmap(void *start, uint64 len, int prot) {
 //    if (len == 0)
 //        return 0;

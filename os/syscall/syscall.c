@@ -24,10 +24,10 @@ char *syscall_names(int id)
         return "SYS_mknod";
     case SYS_mkdirat:
         return "SYS_mkdirat";
-    case SYS_link:
-        return "SYS_link";
-    case SYS_unlink:
-        return "SYS_unlink";
+    case SYS_linkat:
+        return "SYS_linkat";
+    case SYS_unlinkat:
+        return "SYS_unlinkat";
     case SYS_chdir:
         return "SYS_chdir";
     case SYS_openat:
@@ -192,11 +192,11 @@ void syscall()
     case SYS_mkdirat:
         ret = sys_mkdirat(args[0], (char *)args[1], args[2]);
         break;
-    case SYS_link:
-        ret = sys_link((char *)args[0], (char *)args[1]);
+    case SYS_linkat:
+        ret = sys_linkat(args[0], (char *)args[1], args[2], (char *)args[3], args[4]);
         break;
-    case SYS_unlink:
-        ret = sys_unlink((char *)args[0]);
+    case SYS_unlinkat:
+        ret = sys_unlinkat(args[0], (char *)args[1], args[2]);
         break;
     case SYS_sharedmem:
         ret = (uint64)sys_sharedmem((char *)args[0], args[1]);

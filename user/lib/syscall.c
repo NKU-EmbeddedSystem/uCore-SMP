@@ -120,13 +120,14 @@ int chdir(const char *path){
 }
 
 
-int link(const char *oldpath, const char *newpath){
-    return syscall(SYS_link, oldpath, newpath);
-
+int link(char *old_path, char *new_path)
+{
+    return syscall(SYS_linkat, AT_FDCWD, old_path, AT_FDCWD, new_path, 0);
 }
 
-int unlink(const char *pathname){
-    return syscall(SYS_unlink, pathname);
+int unlink(char *path)
+{
+    return syscall(SYS_unlinkat, AT_FDCWD, path, 0);
 }
 
 int64 setpriority(int64 priority){

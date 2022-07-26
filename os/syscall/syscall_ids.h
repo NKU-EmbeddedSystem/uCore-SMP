@@ -6,8 +6,8 @@
 #define SYS_dup3 24
 #define SYS_mknod 33
 #define SYS_mkdirat 34
-#define SYS_link 37
-#define SYS_unlink 38
+#define SYS_linkat 37
+#define SYS_unlinkat 35
 #define SYS_chdir 49
 #define SYS_openat 56
 #define SYS_close 57

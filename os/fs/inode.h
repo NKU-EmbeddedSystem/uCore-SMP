@@ -41,7 +41,13 @@ struct device {
     int minor;
 };
 
+struct symlink {
+    int magic;
+    char path[MAXPATH];
+};
+
 #define DEVICE_MAGIC 'devx'
+#define SYMLINK_MAGIC 'slnk'
 
 void inode_table_init();
 
@@ -62,6 +68,8 @@ struct inode *inode_parent_by_name(char *path, char *name);
 
 void itrunc(struct inode *ip);
 
+void print_inode(struct inode *ip);
+
 struct inode *
 dirlookup(struct inode *dp, char *name);
 
@@ -70,8 +78,14 @@ icreate(struct inode *dp, char *name, int type, int major, int minor);
 
 void inode_test();
 
+
+
 int igetdents(struct inode *dp, char *buf, unsigned long len);
 
 int stati(struct inode *ip, struct kstat *st);
+
+int ilink(struct inode *oldip, struct inode *newip);
+
+int iunlink(struct inode *ip);
 
 #endif // INODE_H

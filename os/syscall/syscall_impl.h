@@ -61,9 +61,9 @@ int sys_fstat(int fd, struct kstat *statbuf_va);
 
 int sys_chdir(char *path_va);
 
-int sys_link( char *oldpath_va,  char *newpath_va);
+int sys_linkat(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags);
 
-int sys_unlink( char *pathname_va);
+int sys_unlinkat(int dirfd, char *pathname, int flags);
 
 int64 sys_setpriority(int64 priority);
 

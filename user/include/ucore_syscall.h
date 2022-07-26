@@ -48,9 +48,9 @@ int stat(const char *pathname, struct kstat *statbuf);
 
 int chdir(const char *path);
 
-int link(const char *oldpath, const char *newpath);
+int link(char *old_path, char *new_path);
 
-int unlink(const char *pathname);
+int unlink(char *path);
 
 int64 setpriority(int64 priority);
 

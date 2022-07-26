@@ -92,7 +92,7 @@ void exit(int code)
     // call the function here because disk I/O contains 'sleep',
     // we need a process context to call the 'sleep' function
     if (the_only_proc_in_pool()) {
-        ctable_release_all();
+        ctable_release(NULL);
     }
 
     // 4. set the state

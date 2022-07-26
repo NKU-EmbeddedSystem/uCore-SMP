@@ -106,7 +106,6 @@ struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
         if (cache->valid && cache->host == ip && cache->offset == offset) {
             infof("reuse cache");
             ctable_lru_adjust(cache);
-            idup(ip);
             release_mutex_sleep(&ctable.lock);
             return cache;
         }
@@ -219,13 +218,13 @@ static int cache_writeback(struct page_cache* cache) {
 
 // when all processes are about to terminate, call this function to free all caches
 // so the disk can get all changes back to it
-void ctable_release_all() {
-    infof("ctable_release_all");
+void ctable_release(struct inode *ip) {
+    infof("ctable_release");
     struct page_cache* cache;
     acquire_mutex_sleep(&ctable.lock);
     for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
         acquire_mutex_sleep(&cache->lock);
-        if (cache->valid) {
+        if (cache->valid && (cache->host == ip || ip == NULL)) {
             // if dirty, write back to disk
             if (cache->dirty && cache_writeback(cache) != 0) {
                 panic("cache_writeback error");
@@ -260,8 +259,6 @@ static void cache_table_init() {
 
 //static uint
 //bmap(struct inode *ip, uint bn);
-static
-void print_inode(struct inode *ip);
 static struct inode *
 inode_or_parent_by_name(char *path, int nameiparent, char *name);
 
@@ -511,6 +508,7 @@ void iput(struct inode *ip) {
     if (ip->ref == 1) {
         if (ip->type == T_DIR) {
             // close directory via fatfs interface
+            infof("iput: close directory %s", ip->path);
             FRESULT result = f_closedir(&ip->dir);
             if (result != FR_OK) {
                 printf("iput: f_closedir failed, result = %d\n", result);
@@ -518,6 +516,7 @@ void iput(struct inode *ip) {
             }
         } else {
             // close file via fatfs interface
+            infof("iput: closing file %s\n", ip->path);
             FRESULT result = f_close(&ip->file);
             if (result != FR_OK) {
                 printf("iput: f_close failed, result = %d\n", result);
@@ -682,6 +681,7 @@ int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
     if (off + n > f_size(&ip->file) && f_lseek(&ip->file, off + n) != FR_OK) {
         return 0;
     }
+    infof("writei: off: %d, n: %d, file size: %d", off, n, f_size(&ip->file));
 
     uint off_align;
     uint64 data_align;
@@ -886,18 +886,19 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
 //}
 
 // do unlock and put, because we should close the file at first, iput is not compatible
-void itrunc(struct inode *ip) {
-
-    KERNEL_ASSERT(ip != NULL, "itrunc: inode is NULL");
-
-    iunlockput(ip);
-
-    KERNEL_ASSERT(ip->ref == 0, "itrunc: ref is not 0");
-    FRESULT result;
-    result = f_unlink(ip->path);
-    KERNEL_ASSERT(result == FR_OK, "itrunc: f_unlink failed");
-
-}
+//void itrunc(struct inode *ip) {
+//
+//    KERNEL_ASSERT(ip != NULL, "itrunc: inode is NULL");
+//
+//    ctable_release(ip);
+//    iunlockput(ip);
+//
+//    KERNEL_ASSERT(ip->ref == 0, "itrunc: ref is not 0");
+//    FRESULT result;
+//    result = f_unlink(ip->path);
+//    KERNEL_ASSERT(result == FR_OK, "itrunc: f_unlink failed");
+//
+//}
 
 struct inode *
 dirlookup(struct inode *dp, char *name) {
@@ -950,10 +951,14 @@ dirlookup(struct inode *dp, char *name) {
 
         // check special file type (device)
         struct device devinfo = {};
+        struct symlink symlink_info = {};
+        FIL symlink_file = {};
         uint br = 0;
-        if (f_read(&inode_ptr->file, &devinfo, sizeof(devinfo), &br) == FR_OK &&
+        if (f_rewind(&inode_ptr->file) == FR_OK &&
+            f_read(&inode_ptr->file, &devinfo, sizeof(devinfo), &br) == FR_OK &&
             br == sizeof(devinfo) &&
             devinfo.magic == DEVICE_MAGIC) {
+            infof("dirlookup: open device: %s", path);
             inode_ptr->dev = ROOTDEV;
             inode_ptr->ref = 1;
             inode_ptr->type = T_DEVICE;
@@ -963,7 +968,30 @@ dirlookup(struct inode *dp, char *name) {
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return inode_ptr;
+
+        } else if (f_rewind(&inode_ptr->file) == FR_OK &&
+                   f_read(&inode_ptr->file, &symlink_info, sizeof(symlink_info), &br) == FR_OK &&
+                   br > sizeof(int) &&
+                   symlink_info.magic == SYMLINK_MAGIC &&
+                   symlink_info.path[0] == '/') {
+            infof("dirlookup: open symlink: %s, linkto %s", path, symlink_info.path);
+            // close old file
+            f_close(&inode_ptr->file);
+            // record new file
+            if (f_open(&inode_ptr->file, symlink_info.path, FA_READ | FA_WRITE) != FR_OK) {
+                infof("dirlookup: symlink destination is invalid: %s", symlink_info.path);
+                return NULL;
+            }
+            inode_ptr->dev = ROOTDEV;
+            inode_ptr->ref = 1;
+            inode_ptr->type = T_FILE;
+            strcpy(inode_ptr->path, symlink_info.path);
+//            release(&itable.lock);
+            release_mutex_sleep(&itable.lock);
+            return inode_ptr;
+
         } else {
+            infof("dirlookup: open file: %s", path);
             inode_ptr->dev = ROOTDEV;
             inode_ptr->ref = 1;
             inode_ptr->type = T_FILE;
@@ -1097,7 +1125,6 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
     }
 }
 
-static
 void print_inode(struct inode *ip) {
     printf("inode: %p\n", ip);
     printf("  dev: %d\n", ip->dev);
@@ -1186,5 +1213,37 @@ int stati(struct inode *ip, struct kstat *st) {
     // fat32 doesn't support hardlink, so nlink must be 1
     st->st_nlink = 1;
     st->st_size = f_size(&ip->file);
+    return 0;
+}
+
+int ilink(struct inode *oldip, struct inode *newip) {
+    int len = strlen(oldip->path);
+    // contains delimiter
+    int magic = SYMLINK_MAGIC;
+    if (writei(newip, FALSE, &magic, 0, sizeof(magic)) != sizeof(magic)) {
+        infof("ilink: writei failed");
+        return -1;
+    }
+    if (writei(newip, FALSE, oldip->path, sizeof(magic), len + 1) != len + 1) {
+        infof("ilink: writei failed");
+        return -1;
+    }
+    // remove the new inode from the page cache
+    // so we can read the symlink again to open the real file
+    ctable_release(newip);
+    return 0;
+}
+
+int iunlink(struct inode *ip) {
+    char path[MAXPATH];
+    strcpy(path, ip->path);
+    // write page cache back to disk
+    ctable_release(ip);
+    KERNEL_ASSERT(ip->ref == 1, "iunlink: other process still using this inode");
+    // close the file / directory
+    iunlockput(ip);
+    // do delete
+    FRESULT res = f_unlink(path);
+    KERNEL_ASSERT(res == FR_OK, "iunlink: f_unlink failed");
     return 0;
 }

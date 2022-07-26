@@ -70,6 +70,14 @@ void fileclose(struct file *f) {
     }
 }
 
+void fileclear(struct file *f) {
+    acquire(&filepool.lock);
+    --f->ref;
+    KERNEL_ASSERT(f->ref == 0, "file reference should be 0");
+    f->type = FD_NONE;
+    release(&filepool.lock);
+}
+
 /**
  * @brief Scans the file table for an unreferenced file
  * 
@@ -182,7 +190,7 @@ int fileopen(char *path, int flags) {
     path = fix_cwd_slashes(path);
 
     if (flags & O_CREATE) {
-        ip = create(path, T_FILE, 0, 0);
+        ip = create(path, flags & O_DIRECTORY ? T_DIR : T_FILE, 0, 0);
         if (ip == NULL) {
             infof("Cannot create inode");
             return -1;
@@ -226,9 +234,9 @@ int fileopen(char *path, int flags) {
     f->readable = !(flags & O_WRONLY);
     f->writable = (flags & O_WRONLY) || (flags & O_RDWR);
 
-    if ((flags & O_TRUNC) && ip->type == T_FILE) {
-        itrunc(ip);
-    }
+//    if ((flags & O_TRUNC) && ip->type == T_FILE) {
+//        itrunc(ip);
+//    }
 
     iunlock(ip);
     return fd;
@@ -414,4 +422,38 @@ int getdents(struct file *f, char *buf, unsigned long len) {
     int result = igetdents(f->ip, buf, len);
     iunlock(f->ip);
     return result;
+}
+
+int filelink(struct file *oldfile, struct file *newfile) {
+    if (oldfile->type != FD_INODE || newfile->type != FD_INODE) {
+        infof("filelink: not a inode");
+        return -1;
+    }
+    ilock(oldfile->ip);
+    if (oldfile->ip->type != T_FILE) {
+        infof("filelink: not a file (1)");
+        iunlock(oldfile->ip);
+        return -1;
+    }
+    ilock(newfile->ip);
+    if (newfile->ip->type != T_FILE) {
+        infof("filelink: not a file (2)");
+        iunlock(newfile->ip);
+        iunlock(oldfile->ip);
+        return -1;
+    }
+    int result = ilink(oldfile->ip, newfile->ip);
+    iunlock(newfile->ip);
+    iunlock(oldfile->ip);
+    return result;
+}
+
+int fileunlink(struct file *file) {
+    if (file->type != FD_INODE) {
+        infof("fileunlink: not a inode");
+        return -1;
+    }
+    ilock(file->ip);
+    iunlink(file->ip); // contains iunlock and iput
+    return 0;
 }
