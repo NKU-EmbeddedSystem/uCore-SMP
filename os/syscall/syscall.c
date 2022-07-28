@@ -229,7 +229,7 @@ void syscall()
         ret = sys_mprotect((void *)args[0], args[1], args[2]);
         break;
     default:
-        ret = -1;
+        ret = -38; // ENOSYS
         warnf("unknown syscall %d", (int)id);
     }
     if(id != SYS_execve)
