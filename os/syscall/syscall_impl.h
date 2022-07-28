@@ -91,6 +91,8 @@ int sys_munmap(void *start, size_t len);
 
 int sys_writev(int fd, struct iovec *iov, int iovcnt);
 
+int sys_mprotect(void *addr, size_t len, int prot);
+
 int sys_dummy_success(void);
 
 int sys_dummy_failure(void);

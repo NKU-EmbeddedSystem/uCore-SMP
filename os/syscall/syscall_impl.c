@@ -986,6 +986,43 @@ int sys_writev(int fd, struct iovec *iov_va, int iovcnt) {
     return total_len;
 }
 
+int sys_mprotect(void *addr, size_t len, int prot) {
+    struct proc *p = curr_proc();
+    if (addr == NULL) {
+        infof("sys_mprotect: addr is NULL");
+        return -1;
+    }
+    if ((uint64)addr % PAGE_SIZE != 0) {
+        infof("sys_mprotect: addr is not aligned");
+        return -1;
+    }
+    if (len == 0) {
+        infof("sys_mprotect: len is 0");
+        return -1;
+    }
+    if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) {
+        infof("sys_mprotect: prot is invalid");
+        return -1;
+    }
+    uint64 start = (uint64)addr;
+    uint64 end = PGROUNDUP(start + len);
+    uint npages = (end - start) / PAGE_SIZE;
+
+    // calculate page protection
+    int page_prot = 0;
+    if (prot & PROT_READ) {
+        page_prot |= PTE_R;
+    }
+    if (prot & PROT_WRITE) {
+        page_prot |= PTE_W;
+    }
+    if (prot & PROT_EXEC) {
+        page_prot |= PTE_X;
+    }
+
+    return uvmprotect(p->pagetable, start, npages, page_prot);
+}
+
 int sys_dummy_success() {
     return 0;
 }

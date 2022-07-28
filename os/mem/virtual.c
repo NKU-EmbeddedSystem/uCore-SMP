@@ -477,6 +477,28 @@ err:
     return -1;
 }
 
+int uvmprotect(pagetable_t pagetable, uint64 va, uint npages, uint perm) {
+    pte_t *pte;
+    uint64 cur_addr;
+    if (perm & ~(PTE_R | PTE_W | PTE_X)) {
+        infof("uvmprotect: invalid perm %x, only support RWX modification", perm);
+        return -1;
+    }
+
+    for (cur_addr = va; cur_addr < va + npages * PGSIZE; cur_addr += PGSIZE) {
+        if ((pte = walk(pagetable, cur_addr, FALSE)) == 0) {
+            infof("uvmprotect: pte should exist");
+            return -1;
+        }
+        if ((*pte & PTE_V) == 0) {
+            infof("uvmprotect: page not present");
+            return -1;
+        }
+        *pte = (*pte & ~(PTE_R | PTE_W | PTE_X)) | perm;
+    }
+    return 0;
+}
+
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.

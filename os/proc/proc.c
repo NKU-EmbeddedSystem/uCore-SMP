@@ -729,17 +729,16 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
     }
 
     // calculate page protection
-//    int page_prot = PTE_U;
-//    if (prot & PROT_READ) {
-//        page_prot |= PTE_R;
-//    }
-//    if (prot & PROT_WRITE) {
-//        page_prot |= PTE_W;
-//    }
-//    if (prot & PROT_EXEC) {
-//        page_prot |= PTE_X;
-//    }
-    int page_prot = PTE_U | PTE_R | PTE_W | PTE_X;
+    int page_prot = PTE_U;
+    if (prot & PROT_READ) {
+        page_prot |= PTE_R;
+    }
+    if (prot & PROT_WRITE) {
+        page_prot |= PTE_W;
+    }
+    if (prot & PROT_EXEC) {
+        page_prot |= PTE_X;
+    }
 
     // do mmap
     void *pa_arr[npages];

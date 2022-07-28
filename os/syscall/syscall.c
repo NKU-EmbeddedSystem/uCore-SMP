@@ -226,7 +226,7 @@ void syscall()
         ret = sys_dummy_success();
         break;
     case SYS_mprotect:
-        ret = sys_dummy_success();
+        ret = sys_mprotect((void *)args[0], args[1], args[2]);
         break;
     default:
         ret = -1;
