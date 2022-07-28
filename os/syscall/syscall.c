@@ -225,9 +225,9 @@ void syscall()
     case SYS_prlimit64:
         ret = sys_dummy_success();
         break;
-    case SYS_mprotect:
-        ret = sys_mprotect((void *)args[0], args[1], args[2]);
-        break;
+//    case SYS_mprotect:
+//        ret = sys_mprotect((void *)args[0], args[1], args[2]);
+//        break;
     default:
         ret = -38; // ENOSYS
         warnf("unknown syscall %d", (int)id);
