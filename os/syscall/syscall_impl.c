@@ -982,6 +982,34 @@ int sys_writev(int fd, struct iovec *iov_va, int iovcnt) {
     return total_len;
 }
 
+int sys_readv(int fd, struct iovec *iov_va, int iovcnt) {
+    struct file *f;
+    struct proc *p = curr_proc();
+    f = get_proc_file_by_fd(p, fd);
+    if (f == NULL) {
+        infof("fd is not valid");
+        return -1;
+    }
+
+    struct iovec iov[iovcnt];
+    if (copyin(p->pagetable, (char*)iov, (uint64)iov_va, sizeof(struct iovec) * iovcnt) != 0) {
+        infof("sys_readv: copyin failed");
+        return -1;
+    }
+
+    int i;
+    int total_len = 0;
+    for (i = 0; i < iovcnt; i++) {
+        int result = fileread(f, (void *)iov[i].iov_base, iov[i].iov_len);
+        if (result < 0) {
+            infof("fileread failed at iov[%d], base = %p, len = %d", i, iov[i].iov_base, iov[i].iov_len);
+            return -1;
+        }
+        total_len += result;
+    }
+    return total_len;
+}
+
 int sys_mprotect(void *addr, size_t len, int prot) {
     struct proc *p = curr_proc();
     if (addr == NULL) {
