@@ -454,6 +454,7 @@ int fileunlink(struct file *file) {
         return -1;
     }
     ilock(file->ip);
-    iunlink(file->ip); // contains iunlock and iput
+    iunlink(file->ip);
+    iunlock(file->ip);
     return 0;
 }

@@ -446,11 +446,7 @@ int sys_unlinkat(int dirfd, char *pathname, int flags) {
 
     int ret = fileunlink(file);
 
-    // because the inode of the file is closed by fileunlink, so we don't need to clean up inode
-    // just clear the file structure and proc->files[fd] is ok
-    p->files[fd] = NULL;
-    fileclear(file);
-
+    sys_close(fd);
     return ret;
 }
 

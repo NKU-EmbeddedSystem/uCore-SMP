@@ -24,6 +24,7 @@ struct inode {
     DIR dir;
 
     char path[MAXPATH]; // absolute path
+    bool unlinked;      // has been unlinked
 };
 
 struct page_cache {

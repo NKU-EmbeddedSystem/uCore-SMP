@@ -485,6 +485,7 @@ struct inode *iget_root() {
     inode_ptr->ref = 1;
     inode_ptr->type = T_DIR;
     strcpy(inode_ptr->path, "/");
+    inode_ptr->unlinked = 0;
 
 //    acquire(&itable.lock);
     release_mutex_sleep(&itable.lock);
@@ -506,6 +507,7 @@ void iput(struct inode *ip) {
     KERNEL_ASSERT(ip->ref > 0, "inode ref can not be 0");
 
     if (ip->ref == 1) {
+        // close file/direcroty via fatfs interface
         if (ip->type == T_DIR) {
             // close directory via fatfs interface
             infof("iput: close directory %s", ip->path);
@@ -521,6 +523,15 @@ void iput(struct inode *ip) {
             if (result != FR_OK) {
                 printf("iput: f_close failed, result = %d\n", result);
                 panic("iput: f_close failed");
+            }
+        }
+        // delete file/directory if it is unlinked
+        if (ip->unlinked) {
+            infof("iput: deleting file %s\n", ip->path);
+            FRESULT result = f_unlink(ip->path);
+            if (result != FR_OK) {
+                printf("iput: f_unlink failed, result = %d\n", result);
+                panic("iput: f_unlink failed");
             }
         }
     }
@@ -942,6 +953,7 @@ dirlookup(struct inode *dp, char *name) {
         inode_ptr->ref = 1;
         inode_ptr->type = T_DIR;
         strcpy(inode_ptr->path, path);
+        inode_ptr->unlinked = 0;
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -965,6 +977,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->device.major = devinfo.major;
             inode_ptr->device.minor = devinfo.minor;
             strcpy(inode_ptr->path, path);
+            inode_ptr->unlinked = 0;
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return inode_ptr;
@@ -986,6 +999,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->ref = 1;
             inode_ptr->type = T_FILE;
             strcpy(inode_ptr->path, symlink_info.path);
+            inode_ptr->unlinked = 0;
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return inode_ptr;
@@ -996,6 +1010,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->ref = 1;
             inode_ptr->type = T_FILE;
             strcpy(inode_ptr->path, path);
+            inode_ptr->unlinked = 0;
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return inode_ptr;
@@ -1069,6 +1084,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->ref = 1;
         inode_ptr->type = T_DIR;
         strcpy(inode_ptr->path, path);
+        inode_ptr->unlinked = 0;
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -1086,6 +1102,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->ref = 1;
         inode_ptr->type = T_FILE;
         strcpy(inode_ptr->path, path);
+        inode_ptr->unlinked = 0;
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -1113,6 +1130,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->device.major = major;
         inode_ptr->device.minor = minor;
         strcpy(inode_ptr->path, path);
+        inode_ptr->unlinked = 0;
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -1235,15 +1253,8 @@ int ilink(struct inode *oldip, struct inode *newip) {
 }
 
 int iunlink(struct inode *ip) {
-    char path[MAXPATH];
-    strcpy(path, ip->path);
-    // write page cache back to disk
-    ctable_release(ip);
-    KERNEL_ASSERT(ip->ref == 1, "iunlink: other process still using this inode");
-    // close the file / directory
-    iunlockput(ip);
-    // do delete
-    FRESULT res = f_unlink(path);
-    KERNEL_ASSERT(res == FR_OK, "iunlink: f_unlink failed");
+    // just record the inode as deleted
+    // when there's no reference to the inode, the file will be deleted
+    ip->unlinked = 1;
     return 0;
 }
