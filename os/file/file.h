@@ -11,6 +11,10 @@
 #define minor(dev) ((dev)&0xFFFF)
 #define mkdev(m, n) ((uint)((m) << 16 | (n)))
 
+// for seek seting
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 // map major device number to device functions.
 struct device_rw_handler {
@@ -78,6 +82,7 @@ int getdents(struct file *f, char *buf, unsigned long len);
 int filelink(struct file *oldfile, struct file *newfile);
 int fileunlink(struct file *file);
 void fileclear(struct file *f);
+int filelseek(struct file *f, off_t offset, int whence);
 #define FILE_MAX (128 * 16)
 
 #define CONSOLE 1

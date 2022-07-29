@@ -458,3 +458,42 @@ int fileunlink(struct file *file) {
     iunlock(file->ip);
     return 0;
 }
+
+int filelseek(struct file *f, off_t offset, int whence) {
+    if (f->type != FD_INODE) {
+        infof("filelseek: not a inode");
+        return -1;
+    }
+    ilock(f->ip);
+    if (f->ip->type != T_FILE) {
+        infof("filelseek: not a file");
+        iunlock(f->ip);
+        return -1;
+    }
+
+    // get file size
+    struct kstat st;
+    if (stati(f->ip, &st) < 0) {
+        infof("filelseek: stati failed");
+        iunlock(f->ip);
+        return -1;
+    }
+
+    // calculate new offset and write it to f->off
+    uint off = f->off;
+    if (whence == SEEK_SET) {
+        off = offset;
+    } else if (whence == SEEK_CUR) {
+        off += offset;
+    } else if (whence == SEEK_END) {
+        off = st.st_size + offset;
+    } else {
+        infof("filelseek: invalid whence");
+        iunlock(f->ip);
+        return -1;
+    }
+    f->off = off;
+
+    iunlock(f->ip);
+    return off;
+}

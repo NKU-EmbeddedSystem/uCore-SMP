@@ -38,6 +38,8 @@ char *syscall_names(int id)
         return "SYS_pipe2";
     case SYS_getdents64:
         return "SYS_getdents64";
+    case SYS_lseek:
+        return "SYS_lseek";
     case SYS_read:
         return "SYS_read";
     case SYS_write:
@@ -128,6 +130,9 @@ void syscall()
         break;
     case SYS_read:
         ret = sys_read(args[0], (void *)args[1], args[2]);
+        break;
+    case SYS_lseek:
+        ret = sys_lseek(args[0], args[1], args[2]);
         break;
     case SYS_openat:
         ret = sys_openat(args[0], (char *)args[1], args[2], args[3]);

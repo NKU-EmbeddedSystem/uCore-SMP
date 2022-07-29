@@ -27,6 +27,8 @@ ssize_t sys_read(int fd, void *dst_va, size_t len);
 
 ssize_t sys_write(int fd, void *src_va, size_t len);
 
+long sys_lseek(int fd, long offset, int whence);
+
 pid_t sys_getpid(void);
 
 pid_t sys_getppid();

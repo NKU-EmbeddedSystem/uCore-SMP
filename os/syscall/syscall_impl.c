@@ -1019,6 +1019,17 @@ int sys_mprotect(void *addr, size_t len, int prot) {
     return uvmprotect(p->pagetable, start, npages, page_prot);
 }
 
+off_t sys_lseek(int fd, off_t offset, int whence) {
+    struct file *f;
+    struct proc *p = curr_proc();
+    f = get_proc_file_by_fd(p, fd);
+    if (f == NULL) {
+        infof("fd is not valid");
+        return -1;
+    }
+    return filelseek(f, offset, whence);
+}
+
 int sys_dummy_success() {
     return 0;
 }
