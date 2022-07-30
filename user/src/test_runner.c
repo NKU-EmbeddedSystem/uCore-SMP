@@ -146,7 +146,7 @@ int main() {
             "dn_expand_ptr_0",
             "fflush_exit",
             "fgets_eof",
-            "fgetwc_buffering",
+//            "fgetwc_buffering",
             "flockfile_list",
             "fpclassify_invalid_ld80",
             "ftello_unflushed_append",
