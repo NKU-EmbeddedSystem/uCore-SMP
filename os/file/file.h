@@ -89,5 +89,7 @@ int filelseek(struct file *f, off_t offset, int whence);
 #define CPU_DEVICE 2
 #define MEM_DEVICE 3
 #define PROC_DEVICE 4
+#define NULL_DEVICE 5
+#define ZERO_DEVICE 6
 
 #endif //!__FILE_H__

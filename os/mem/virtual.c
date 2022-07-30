@@ -522,6 +522,25 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len) {
     return 0;
 }
 
+int uvmemset(pagetable_t pagetable, uint64 dstva, char c, uint64 len) {
+    uint64 n, va0, pa0;
+
+    while (len > 0) {
+        va0 = PGROUNDDOWN(dstva);
+        pa0 = walkaddr(pagetable, va0);
+        if (pa0 == 0)
+            return -1;
+        n = PGSIZE - (dstva - va0);
+        if (n > len)
+            n = len;
+        memset((void *)(pa0 + (dstva - va0)), c, n);
+
+        len -= n;
+        dstva = va0 + PGSIZE;
+    }
+    return 0;
+}
+
 // Copy from user to kernel.
 // Copy len bytes to dst from virtual address srcva in a given page table.
 // Return 0 on success, -1 on error.
@@ -611,6 +630,16 @@ err_t either_copyin(void *dst, void *src, size_t len, int is_user_src) {
         return copyin(p->pagetable, dst, (uint64)src, len);
     } else {
         memmove(dst, src, len);
+        return 0;
+    }
+}
+
+err_t either_memset(void *dst, char c, size_t len, int is_user_src) {
+    struct proc *p = curr_proc();
+    if (is_user_src) {
+        return uvmemset(p->pagetable, (uint64)dst, c, len);
+    } else {
+        memset(dst, c, len);
         return 0;
     }
 }

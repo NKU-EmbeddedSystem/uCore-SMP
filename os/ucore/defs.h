@@ -107,6 +107,8 @@ void kvminithart();
 void free_pagetable_pages(pagetable_t pagetable);
 int either_copyout(void *dst, void *src, size_t len, int is_user_dst);
 int either_copyin(void *dst, void *src, size_t len, int is_user_src);
+int uvmemset(pagetable_t pagetable, uint64 dstva, char c, uint64 len);
+err_t either_memset(void *dst, char c, size_t len, int is_user_src);
 
 // timer.c
 void timerinit();
