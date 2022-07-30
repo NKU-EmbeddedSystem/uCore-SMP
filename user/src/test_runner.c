@@ -24,33 +24,60 @@ int test(char *argv[]) {
 
 int main() {
 
-    if (open("console", O_RDWR) < 0) {
-        mknod("console", 1, 0);
-        open("console", O_RDWR);
+    // create /dev directory
+    int fd_dir = open("/dev", O_DIRECTORY | O_CREATE);
+    if (fd_dir < 0) {
+        printf("Shell: can not open /dev\n");
+        return -1;
+    }
+    close(fd_dir);
+
+    if (open("/dev/console", O_RDWR) < 0) {
+        mknod("/dev/console", 1, 0);
+        open("/dev/console", O_RDWR);
     }
 
     dup(0); // stdout
     dup(0); // stderr
 
-    if (open("cpu", O_RDWR) < 0) {
-        mknod("cpu", 2, 0);
+    if (open("/dev/cpu", O_RDWR) < 0) {
+        mknod("/dev/cpu", 2, 0);
         // open("cpu", O_RDWR);
     }
-    if (open("mem", O_RDWR) < 0) {
-        mknod("mem", 3, 0);
+    if (open("/dev/mem", O_RDWR) < 0) {
+        mknod("/dev/mem", 3, 0);
         // open("mem", O_RDWR);
     }
-    if (open("proc", O_RDWR) < 0) {
-        mknod("proc", 4, 0);
+    if (open("/dev/proc", O_RDWR) < 0) {
+        mknod("/dev/proc", 4, 0);
         // open("proc", O_RDWR);
     }
+    if (open("/dev/null", O_RDWR) < 0) {
+        mknod("/dev/null", 5, 0);
+        // open("null", O_RDWR);
+    }
+    if (open("/dev/zero", O_RDWR) < 0) {
+        mknod("/dev/zero", 6, 0);
+        // open("zero", O_RDWR);
+    }
 
-    int fd_dir = open("/lib", O_DIRECTORY | O_CREATE);
+    // create /lib directory
+    fd_dir = open("/lib", O_DIRECTORY | O_CREATE);
     if (fd_dir < 0) {
         printf("Shell: can not open /lib\n");
         return -1;
     }
     close(fd_dir);
+
+    // create /tmp directory
+    fd_dir = open("/tmp", O_DIRECTORY | O_CREATE);
+    if (fd_dir < 0) {
+        printf("Shell: can not open /tmp\n");
+        return -1;
+    }
+    close(fd_dir);
+
+    // link dynamic library to /lib directory
     link("/libc.so", "/lib/ld-musl-riscv64-sf.so.1");
     link("/libdlopen_dso.so", "/lib/libdlopen_dso.so");
     link("/libtls_align_dso.so", "/lib/libtls_align_dso.so");
