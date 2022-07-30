@@ -365,18 +365,12 @@ int filestat(struct file *f, uint64 addr) {
     struct proc *p = curr_proc();
     struct kstat st;
 
-    if (f->type != FD_INODE) {
-        infof("filestat: not an regular file (1)");
+    if (f->type != FD_INODE && f->type != FD_DEVICE) {
+        infof("filestat: not file, directory, or device");
         return -1;
     }
 
     ilock(f->ip);
-
-    if (f->ip->type != T_FILE) {
-        infof("filestat: not an regular file (2)");
-        iunlock(f->ip);
-        return -1;
-    }
 
     int result = stati(f->ip, &st);
     if (result < 0) {

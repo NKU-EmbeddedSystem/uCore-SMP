@@ -29,6 +29,18 @@ int sys_fstat(int fd, struct kstat *statbuf_va){
 
 }
 
+int sys_fstatat(int dirfd, const char *pathname, struct kstat *statbuf_va, int flags) {
+
+    int fd = sys_openat(dirfd, pathname, O_RDONLY, 0);
+    if (fd < 0) {
+        infof("openat failed");
+        return -1;
+    }
+    int ret = sys_fstat(fd, statbuf_va);
+    sys_close(fd);
+    return ret;
+}
+
 int sys_pipe(int (*pipefd_va)[2], int flags) {
     if (flags != 0) {
         infof("pipe: flags must be 0");

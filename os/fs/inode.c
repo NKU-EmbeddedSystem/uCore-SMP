@@ -1230,7 +1230,19 @@ int stati(struct inode *ip, struct kstat *st) {
     st->st_dev = ip->dev;
     // fat32 doesn't support hardlink, so nlink must be 1
     st->st_nlink = 1;
-    st->st_size = f_size(&ip->file);
+    // fill st_mode according to inode type
+    switch (ip->type) {
+        case T_DIR:
+            st->st_mode = S_IFDIR;
+            break;
+        case T_FILE:
+            st->st_mode = S_IFREG;
+            st->st_size = f_size(&ip->file);
+            break;
+        case T_DEVICE:
+            st->st_mode = S_IFCHR;
+            break;
+    }
     return 0;
 }
 

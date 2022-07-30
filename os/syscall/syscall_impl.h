@@ -61,6 +61,8 @@ int sys_pipe(int (*pipefd_va)[2], int flags);
 
 int sys_fstat(int fd, struct kstat *statbuf_va);
 
+int sys_fstatat(int dirfd, const char *pathname, struct kstat *statbuf_va, int flags);
+
 int sys_chdir(char *path_va);
 
 int sys_linkat(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags);

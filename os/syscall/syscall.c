@@ -50,6 +50,8 @@ char *syscall_names(int id)
         return "SYS_writev";
     case SYS_fstat:
         return "SYS_fstat";
+    case SYS_fstatat:
+        return "SYS_fstatat";
     case SYS_exit:
         return "SYS_exit";
     case SYS_wait4:
@@ -203,6 +205,9 @@ void syscall()
         break;
     case SYS_fstat:
         ret = sys_fstat((int)args[0], (void *)args[1]);
+        break;
+    case SYS_fstatat:
+        ret = sys_fstatat((int)args[0], (char *)args[1], (void *)args[2], (int)args[3]);
         break;
     case SYS_chdir:
         ret = sys_chdir((char *)args[0]);
