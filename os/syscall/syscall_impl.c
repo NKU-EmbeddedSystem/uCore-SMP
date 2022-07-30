@@ -1065,3 +1065,7 @@ int sys_dummy_success() {
 int sys_dummy_failure() {
     return -1;
 }
+
+int sys_id_dummy() {
+    return 0;
+}

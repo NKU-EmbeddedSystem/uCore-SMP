@@ -47,5 +47,9 @@
 #define SYS_rt_sigtimedwait 137
 #define SYS_prlimit64 261
 #define SYS_mprotect 226
+#define SYS_getuid 174
+#define SYS_geteuid 175
+#define SYS_getgid 176
+#define SYS_getegid 177
 
 #endif // SYSCALL_IDS_H

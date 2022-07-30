@@ -101,4 +101,6 @@ int sys_dummy_success(void);
 
 int sys_dummy_failure(void);
 
+int sys_id_dummy();
+
 #endif // SYSCALL_IMPL_H

@@ -102,6 +102,14 @@ char *syscall_names(int id)
         return "SYS_prlimit64";
     case SYS_mprotect:
         return "SYS_mprotect";
+    case SYS_getuid:
+        return "SYS_getuid";
+    case SYS_geteuid:
+        return "SYS_geteuid";
+    case SYS_getgid:
+        return "SYS_getgid";
+    case SYS_getegid:
+        return "SYS_getegid";
     default:
         return "?";
     }
@@ -238,6 +246,18 @@ void syscall()
 //    case SYS_mprotect:
 //        ret = sys_mprotect((void *)args[0], args[1], args[2]);
 //        break;
+    case SYS_getuid:
+        ret = sys_id_dummy();
+        break;
+    case SYS_geteuid:
+        ret = sys_id_dummy();
+        break;
+    case SYS_getgid:
+        ret = sys_id_dummy();
+        break;
+    case SYS_getegid:
+        ret = sys_id_dummy();
+        break;
     default:
         ret = -38; // ENOSYS
         warnf("unknown syscall %d", (int)id);
