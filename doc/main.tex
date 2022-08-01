@@ -32,7 +32,7 @@
 \pagestyle{fancy}
 \lhead{\kaishu \leftmark}
 % \chead{}
-\rhead{\kaishu 计算机系统设计实验报告}%加粗\bfseries 
+\rhead{\kaishu ShouChun OS设计文档}%加粗\bfseries 
 \lfoot{}
 \cfoot{\thepage}
 \rfoot{}
@@ -137,14 +137,14 @@ rulesepcolor= \color{ red!20!green!20!blue!20}
 
 【文档情况】
 
-前文尚未核对
+林坤那里丰富文件系统file层、inode层内容，写国内外研究现状
 
-正在写内存管理最后部分（但内存管理优化方法暂时没想好怎么写），
-到7.28上午预计大致完成文件系统部分
+有部分还没有加粗标重点
 
-而后根据系统实现写OS设计小节
+有一些图还没画
 
-最后核对文档内容作图
+需要核对核对，调调格式
+
 
 \newpage
 \watermark{60}{10}{NKU}
@@ -230,14 +230,10 @@ uCore-SMP主要使用了C语言进行开发，更易上手。\textbf{于是项�
   \item 实现静态链接与动态链接
 \end{itemize}
 
-按照比赛所设定的阶段，任务也可以按照阶段进行划分，具体表现为不同阶段实现的系统调用：
+按照比赛所设定的阶段，任务也可以按照阶段进行划分，具体表现为不同阶段实现的系统调用。
+初赛阶段需要实现的系统调用如下：
 
-【这里需要改动】
-\subsection{初赛阶段}
-
-经任务分析和编程实现，初赛阶段完成的系统调用及调用号宏定义如下（比赛要求中的39及40系统调用尚未实现）：
-
-\begin{lstlisting}[title=实现的系统调用及其系统调用号,frame=trbl,language={C}]
+\begin{lstlisting}[title=初赛系统调用,frame=trbl,language={C}]
   #define SYS_getcwd 17
   #define SYS_dup 23
   #define SYS_dup3 24
@@ -281,10 +277,7 @@ uCore-SMP主要使用了C语言进行开发，更易上手。\textbf{于是项�
   #define SYS_mailwrite 402
 \end{lstlisting}
 
-\subsection{决赛阶段}
-
-决赛使用了musl和libc-test作为赛题，需要额外实现动态链接的功能。这需要我们
-继续对系统调用进行完善。
+随着比赛阶段的深入，需要实现更多的系统调用
 
 \section{系统框架设计}
 
@@ -357,7 +350,7 @@ SD卡驱动的功能。驱动SD卡功能需要文件系统和SPI共同实现，�
 内存管理部分主要分为内核地址空间、用户地址空间及页表三个部分。其
 布局如下图所示。
 
-【内存管理布局示意图】
+【设计模块示意图】
 
 系统启动、进程管理都在内核地址空间内，每个进程都会分配一个内核栈用以
 执行内核态下才能够实现的功能。程序数据存储、动态内存存储等都在用户地址
@@ -368,9 +361,30 @@ SD卡驱动的功能。驱动SD卡功能需要文件系统和SPI共同实现，�
 
 文件系统模块设计图如下：
 
-【文件系统图】
+【device存疑 FILE层的 INODE层的】
 
-【文字描述】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.15]{image/img03.png}
+\end{figure}
+
+文件系统模块中，文件抽象为FILE结构进行管理。FILE层会分为pipe类型和inode类型
+进行管理，维护引用计数、读写权限等信息。其中pipe类型的file可用于管道管理，从而进行进程间的通信。
+
+inode层中，使用inode组织管理文件类型、目录类型和设备类型的文件，
+inode不被具体进程绑定，且可被多个进程共享。目前设计中，inode层于FAT32文件系统一层绑定，尚未实现vfs层，故
+仅支持目前一种文件系统。普通文件类型和目录类型使用FAT32文件系统进行读写操作。设备类型的文件包括处理器、内存、进程等类型，
+当判断文件类型为设备类型时，即可根据设备号调用对应处理函数进行管理。
+inode层中还实现了有关符号链接的部分，目前实现了普通文件和设备文件的符号链接，用于
+链接libc库的动态链接库文件。
+
+page cache用于将磁盘上的数据加载入页缓存当中，结合mmap实现共享内存并提高
+读写文件的效率，减少空间浪费。
+
+FAT32文件系统部分采用了嵌入式系统常用的FatFs文件系统驱动，由于其提供的接口更加
+接近于Windows，因此需要进行包装来适应类Unix文件系统的接口。
+
+驱动层通过SPI实现SD卡驱动，从而对SD卡上的数据进行读写。
 
 \section{具体实现}
 
@@ -471,7 +485,11 @@ elf loader用于将ELF格式的可执行程序加载到内存中，在该系统�
 
 其简化的流程图如下：
 
-【流程图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.15]{image/loader01.png}
+\end{figure}
+
 
 对于静态链接程序，将可执行程序按照ELF头中的信息加载到内存中即可。
 
@@ -493,8 +511,10 @@ AUXV中的信息主要包括以下几个部分，这些信息对于解释器来�
 
 在系统加载器加载完毕后，会将argv、envp、auxv参数存放在用户态栈中，提供给应用程序与C库使用，栈结构如下：
 
-【栈结构】
-  
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/loader02.png}
+\end{figure}
 
 \subsection{中断异常机制}
 
@@ -703,8 +723,6 @@ void scheduler(void)
 （3）\textbf{创建子进程}：创建子进程实际也是实现fork的方法，在执行fork操作时，当前进程，即父进程，会构造一个
 与自己完全相同的用户空间，并分配对应的空间、pid以及内核栈，新得到的进程即为子进程。
 
-【要不这里再加一下重点的进程系统调用实现】
-
 \subsection{内存管理}
 
 \subsubsection{相关系统调用}
@@ -722,7 +740,10 @@ void scheduler(void)
 
 内核态内存布局如下：
 
-【作图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/mem01.jpg}
+\end{figure}
 
 其中\textbf{I/O空间部分的映射用于与外设交互}。其中PLIC为中断控制器地址，用于控制中断开关，
 获取中断信息。VIRT I/O为qemu的mmio地址，用于在qemu中读取磁盘文件。
@@ -744,7 +765,10 @@ SPI地址为fu740的SPI端口地址，用于读写SD卡。
 
 物理内存池结构如下：
 
-【作图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/mem02.jpg}
+\end{figure}
 
 空闲页面依靠\textbf{单向链表}连接，每个空闲页面的头部是一个list\_entry，指向下一个空闲页面。
 
@@ -800,7 +824,10 @@ struct proc *alloc_proc(void) {
 
 用户态内存布局如下：
 
-【用户地址空间示意图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/mem03.jpg}
+\end{figure}
 
 本项目使用了SV39虚拟内存，支持高达256GB的用户内存空间。
 由ELF装载地址（默认为0x1000）到heap\_start之间的地址空间用于装载ELF可执行程序的各个段。
@@ -877,13 +904,14 @@ if (new_pos > old_pos) {
 
 （2）mmap和munmap的实现
 
-
-
 \textbf{mmap用于申请内存、映射文件、实现共享内存}，其内部实现较为复杂，
 目前支持MAP\_SHARED、MAP\_PRIVATE、MAP\_FIXED、MAP\_ANONYMOUS、MAP\_FILE 类型的请求，
 简化的流程图如下：
 
-【作图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/mem04.png}
+\end{figure}
 
 对于文件映射类请求，由于在文件系统的设计中实现了page cache层，因此可以很容易的获得文件对应的物理页面，
 并将其映射到进程地址空间中。当某进程需要使用磁盘上的某一部分内容时，需要先在内核空间中为其分配一定大小的空间作为缓存
@@ -899,7 +927,11 @@ if (new_pos > old_pos) {
 当两个进程以MAP\_SHARED方式映射了同一个文件的同一位置后，
 则该page\_cache物理页映射到了两个进程地址空间中，即可实现共享内存。
 
-【共享内存图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/mem05.jpg}
+\end{figure}
+
 
 对于内存申请类请求，实现的难点主要在于对MAP\_FIXED的处理，根据MAP\_FIXED标志的说明，
 对于新申请的内存区间与已有内存区间存在交集时，需要将overlap的区间释放掉，
@@ -933,7 +965,10 @@ munmap实现较为简单，只需将参数按照页面大小对齐，
 
 其层次结构如下：
 
-【层次结构图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/file01.jpg}
+\end{figure}
 
 \subsubsection{相关系统调用}
 
@@ -967,15 +1002,23 @@ munmap实现较为简单，只需将参数按照页面大小对齐，
   便于后续的层进一步处理，然后对参数进行合法性检验，
   过滤掉一些不合法、不支持的系统调用请求。
   在这一层中还需要将用户传入的fd转换成struct file*，
-  然后将请求发送给下一层：file层。【TODO】
+  然后将请求发送给下一层：file层。
   
-  【file\_syscall.png】
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.5]{image/file02.jpg}
+  \end{figure}
 
 \subsubsection{file层}
 
 file层操作的对象为file结构体，每个file结构体是进程独有的，因此不需要使用锁防止对该数据结构的并行操作，
 主要工作是维护file结构体内的各个属性，包括引用计数、读写权限等信息，
 并取出内部的struct inode指针，将请求转发给inode层。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/file03.jpg}
+\end{figure}
 
 \subsubsection{inode层}
 
@@ -1033,7 +1076,10 @@ inode层负责管理磁盘上的文件、目录，每一个inode结构体都是�
 由于磁盘I/O对系统性能影响较大，因此在page cache的设计中选择了cache命中率较高的LRU淘汰算法，
 而没有选择random淘汰算法。
 
-【作图】
+\begin{figure}[H]
+  \centering
+  \includegraphics[scale=0.5]{image/file04.jpg}
+\end{figure}
 
 由于大多数操作可以由处在内存中的page cache满足，而不需要进行磁盘I/O操作，
 因此在普通读写中可通过page cache提高I/O速度。
@@ -1120,6 +1166,10 @@ lib目录及其内部符号链接、dev目录及其内部设备文件、tmp目�
 
 tmp目录用于给libc-test创建临时文件使用。
 
+布局示意图如下：
+
+【布局示意图】
+
 \section{总结与感悟}
 
 \subsection{工作实现总结}
@@ -1128,5 +1178,7 @@ ShouChun OS使用C语言进行实现，可运行于多核硬件平台和QEMU模�
 
 
 \subsection{最终感悟}
+
+\section{文档参考}
 
 \end{document}
