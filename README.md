@@ -1,54 +1,52 @@
 # uCore-SMP
 A Symmetric Multiprocessing OS Kernel over RISC-V
 
-## [NEW] SiFive Freedom U740 SoC
+## Supported Devices
 
-<u>**Check out fu740.md for current progress.**</u>
+- HiFive Unmatched (fu740)
+- QEMU
+
+## Documentation
+
+[click here](doc/doc.pdf)
 
 ## Usage
 
-Compile:
+### Running on HiFive Unmatched (fu740)
+
+This version is only available on xiji gitlab. 
+
+There are some versions that can pass the test, they are tagged as fu740-test-vXXX.
 
 ```shell
-git clone https://github.com/TianhuaTao/uCore-SMP.git
+git clone https://gitlab.eduxiji.net/hlw2014/ucore-smp.git
 cd uCore-SMP
+
+# the fu740-test branch exists only on xiji gitlab, not on github
+git checkout fu740-test
+(or fu740-test-v0.5, fu740-test-v0.4 ...)
+
+# this command will generate a kernel image called 'os.bin' in the root directory of the project, which can be loaded into memory via u-boot.
+make all
+```
+
+### Running on QEMU
+
+```shell
+git clone https://github.com/NKU-EmbeddedSystem/uCore-SMP.git
+(or https://gitlab.eduxiji.net/hlw2014/ucore-smp.git)
+
+cd uCore-SMP
+
+# QEMU version is on fu740 branch
+git checkout fu740
 
 # make user programs (e.g. shell)
 make user
 
 # make kernel
 make
-```
 
-Run with QEMU:
-
-```shell
+# run with QEMU
 make run
 ```
-
-Build doc:
-
-```shell
-make doc
-```
-
-## Documentation
-
-You can always build doc from source with `make doc`.
-
-Also you can checkout:
-
-[Online version](http://taotianhua.com/ucore-smp/doc)
-
-[PDF version](http://taotianhua.com/ucore-smp/ucore-smp.pdf)
-
-## Available Branches
-
-- main: Fully functional OS.
-- fu740: OS for HiFive Unmatched (SiFive Freedom U740 SoC)
-- ch3-smp: Batch Processing OS + Time Sharing + SMP.
-- ch4-smp: Batch Processing OS + Time Sharing + Virtual Memory + SMP.
-- ch5-smp: Batch Processing OS + Time Sharing + Virtual Memory + Process Management + SMP.
-- ch6-smp: Batch Processing OS + Time Sharing + Virtual Memory + Process Management + Pipe(Mail) + SMP.
-- label-riscv: A experimental branch trying to run uCore-SMP on a specialized FPGA with data labeling.
-
