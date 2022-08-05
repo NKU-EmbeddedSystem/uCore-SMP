@@ -169,3 +169,10 @@ memmove(void *vdst, const void *vsrc, int n) {
     }
     return vdst;
 }
+
+char* strcat(char *s, const char *t) {
+    char *os = s;
+    while (*s) s++;
+    while ((*s++ = *t++) != 0);
+    return os;
+}
