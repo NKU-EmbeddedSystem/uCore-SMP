@@ -9,6 +9,7 @@
 #define MAXFILE (NDIRECT + NINDIRECT)
 
 #define MAXPATH 128
+#define NFASTSEEK 8
 
 // for kstat::st_mode
 #define S_IFMT     0170000   // bit mask for the file type bit field
@@ -35,6 +36,7 @@ struct inode {
 
     char path[MAXPATH]; // absolute path
     bool unlinked;      // has been unlinked
+    uint32 clmt[NFASTSEEK]; // cluster link map table buffer, for fatfs fast seek
 };
 
 struct page_cache {

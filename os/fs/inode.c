@@ -914,6 +914,15 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
 //
 //}
 
+static void ienable_fastseek(struct inode *ip) {
+    KERNEL_ASSERT(ip != NULL, "ienable_fastseek: inode is NULL");
+    KERNEL_ASSERT(ip->type == T_FILE, "ienable_fastseek: inode is not a file");
+    ip->clmt[0] = NFASTSEEK;
+    ip->file.cltbl = ip->clmt;
+    FRESULT res = f_lseek(&ip->file, CREATE_LINKMAP);
+    KERNEL_ASSERT(res == FR_OK, "ienable_fastseek: enable_fastseek failed");
+}
+
 struct inode *
 dirlookup(struct inode *dp, char *name) {
     KERNEL_ASSERT(dp->type == T_DIR, "dirlookup: not a directory");
@@ -1005,6 +1014,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->unlinked = 0;
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
+            ienable_fastseek(inode_ptr);
             return inode_ptr;
 
         } else {
@@ -1016,6 +1026,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->unlinked = 0;
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
+            ienable_fastseek(inode_ptr);
             return inode_ptr;
         }
 
@@ -1108,6 +1119,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->unlinked = 0;
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
+        ienable_fastseek(inode_ptr);
         return inode_ptr;
 
     } else if (type == T_DEVICE) {
