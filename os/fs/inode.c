@@ -789,16 +789,18 @@ static struct inode *
 inode_or_parent_by_name(char *path, int nameiparent, char *name) {
     struct inode *ip, *next;
     debugcore("inode_or_parent_by_name, path: %s, nameiparent: %d, name: %s\n", path, nameiparent, name);
+
+    // only if the current process is the shell, cwd can be NULL
+    // because fs may sleep, so we can't initialize it in the kernel init code
+    if (curr_proc()->cwd == NULL) {
+        curr_proc()->cwd = iget_root();
+    }
+
     if (*path == '/') {
         // absolute path
         ip = iget_root();
     } else {
         // relative path
-        // only if the current process is the shell, cwd can be NULL
-        // because fs may sleep, so we can't initialize it in the kernel init code
-        if (curr_proc()->cwd == NULL) {
-            curr_proc()->cwd = iget_root();
-        }
         ip = idup(curr_proc()->cwd);
     }
 
