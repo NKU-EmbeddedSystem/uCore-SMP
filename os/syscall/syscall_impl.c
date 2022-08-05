@@ -1088,6 +1088,17 @@ int sys_utimensat(int dirfd, const char *pathname, const struct timeval times[2]
     return 0;
 }
 
+int sys_faccessat(int dirfd, char *pathname, int mode, int flags) {
+    int fd = sys_openat(dirfd, pathname, flags, mode);
+    if (fd < 0) {
+        infof("sys_faccessat: openat failed, internal error");
+        return fd;
+    }
+    // open file success, just do nothing and close it
+    sys_close(fd);
+    return 0;
+}
+
 int sys_dummy_success() {
     return 0;
 }

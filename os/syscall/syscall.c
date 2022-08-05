@@ -120,6 +120,8 @@ char *syscall_names(int id)
         return "SYS_utimensat";
     case SYS_syslog:
         return "SYS_syslog";
+    case SYS_faccessat:
+        return "SYS_faccessat";
     default:
         return "?";
     }
@@ -264,6 +266,9 @@ void syscall()
         break;
     case SYS_mprotect:
         ret = sys_mprotect((void *)args[0], args[1], args[2]);
+        break;
+    case SYS_faccessat:
+        ret = sys_faccessat(args[0], (char *)args[1], args[2], args[3]);
         break;
     case SYS_getuid:
         ret = sys_id_dummy();
