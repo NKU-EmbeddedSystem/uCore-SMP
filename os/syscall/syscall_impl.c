@@ -249,7 +249,7 @@ static int arg_copy(struct proc* p, char *arg_va[], char *arg[], char arg_str[][
     {
         char* arg_i;   // the argv[i]
         if (copyin(p->pagetable, (char*)&arg_i, (uint64) &arg_va[argc], sizeof(char*))<0){
-            return -1;
+            break;
         }
 
         if (arg_i == NULL){
@@ -259,7 +259,7 @@ static int arg_copy(struct proc* p, char *arg_va[], char *arg[], char arg_str[][
 
         // copy *arg[i] (the string)
         if (copyinstr(p->pagetable, arg_str[argc], (uint64)arg_i, MAX_EXEC_ARG_LENGTH) < 0) {
-            return -1;
+            break;
         }
 
         arg[argc] = arg_str[argc];    // point at the copied string

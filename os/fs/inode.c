@@ -544,6 +544,7 @@ void iput(struct inode *ip) {
 // Returns ip to enable ip = idup(ip1) idiom.
 struct inode *
 idup(struct inode *ip) {
+    tracecore("idup");
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 //    acquire(&itable.lock);
     acquire_mutex_sleep(&itable.lock);

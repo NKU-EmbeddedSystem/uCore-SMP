@@ -16,6 +16,10 @@ static char* round_down_8 (char* p){
 }
 
 int exec(char *name, int argc, const char **argv, int envc, const char **envp) {
+    // fix name cwd at first
+    name = fix_cwd_slashes(name);
+
+    // show exec params
     debug_print_args(name, argc, argv);
     
 //    int id = get_app_id_by_name(name);
@@ -34,9 +38,43 @@ int exec(char *name, int argc, const char **argv, int envc, const char **envp) {
 //    loader(id, p);
     struct auxv_t auxv[AUX_CNT];
     int auxc;
-    if (elf_loader(name, p, auxv, &auxc) < 0) {
+
+    // put these params on stack is ok
+    // because it will recursive call exec, so the current stack is not freed
+    char interp[MAXPATH] = {0};
+    char opt_arg[MAXPATH] = {0};
+
+    if (elf_loader(name, p, auxv, &auxc) >= 0) {
+        goto load_success;
+    } else if (check_script_header(name, interp, opt_arg) >= 0) {
+        // interpreter [optional-arg] pathname arg...
+        // arg...  is the series of words pointed to by the argv argument of execve(),
+        // starting at argv[1].
+
+        bool has_opt_arg = (opt_arg[0] != '\0');
+        // move the argument
+        int move = has_opt_arg ? 2 : 1;
+        for (int i = argc - 1; i >= 0; i--) {
+            argv[i + move] = argv[i];
+        }
+        // fill interp, opt_arg
+        int i = 0;
+        argv[i++] = interp;
+        if (has_opt_arg) {
+            argv[i++] = opt_arg;
+        }
+        // overwrite original argv[0]
+        argv[i++] = name;
+        // adjust argc
+        argc += move;
+
+        // recursive call to exec
+        return exec(interp, argc, argv, envc, envp);
+    } else {
         return -1;
     }
+
+load_success:
     safestrcpy(p->name, name, PROC_NAME_MAX);
     // push args
     char *sp = (char *)p->trapframe->sp;

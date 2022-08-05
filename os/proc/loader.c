@@ -312,14 +312,7 @@ int loadelf(struct proc *p, struct inode *ip, struct elfhdr *ehdr, uint64 *base,
         infof("elf_loader read elf header failed");
         return -1;
     }
-    if (ehdr->magic != ELF_MAGIC) {
-        infof("elf_loader invalid elf magic");
-        return -1;
-    }
-    if (ehdr->phnum == 0) {
-        infof("elf_loader no program header");
-        return -1;
-    }
+
     bool is_dyn = ehdr->type == ET_DYN;
 
     // calculate load range
@@ -410,12 +403,89 @@ int get_interp(struct inode *ip, char *path) {
     return -1;
 }
 
+static int check_elf_header(struct inode *ip) {
+    struct elfhdr ehdr;
+    if (readi(ip, FALSE, &ehdr, 0, sizeof(struct elfhdr)) != sizeof(struct elfhdr)) {
+        infof("elf_loader read elf header failed");
+        return -1;
+    }
+    if (ehdr.magic != ELF_MAGIC) {
+        infof("elf_loader invalid elf magic");
+        return -1;
+    }
+    if (ehdr.phnum == 0) {
+        infof("elf_loader no program header");
+        return -1;
+    }
+    return 0;
+}
+
+int check_script_header(char *name, char *interp, char *opt_arg) {
+    struct inode* ip = inode_by_name(name);
+    if (ip == NULL) {
+        infof("elf_loader inode_by_name exec failed");
+        return -1;
+    }
+
+    ilock(ip);
+
+    char line[MAXPATH];
+    int length;
+    if ((length = readi(ip, FALSE, line, 0, MAXPATH - 1)) < 2) {
+        iunlockput(ip);
+        infof("not a valid script (1)");
+        return -1;
+    }
+    line[length - 1] = '\0';
+    if (line[0] != '#' || line[1] != '!') {
+        iunlockput(ip);
+        infof("not a valid script (2)");
+        return -1;
+    }
+
+    // write interpreter to caller's variable
+    char *_interp = line + 2;
+    while (*_interp == ' ') {
+        _interp++;
+    }
+    char *_interp_end = _interp;
+    while (*_interp_end != ' ' && *_interp_end != '\n' && *_interp_end != '\0') {
+        _interp_end++;
+    }
+    *_interp_end = '\0';
+    strcpy(interp, _interp);
+
+    // write optional arg to caller's variable
+    char *_opt_arg = _interp_end + 1;
+    while (*_opt_arg == ' ') {
+        _opt_arg++;
+    }
+    char *_opt_arg_end = _opt_arg;
+    while (*_opt_arg_end != ' ' && *_opt_arg_end != '\n' && *_opt_arg_end != '\0') {
+        _opt_arg_end++;
+    }
+    *_opt_arg_end = '\0';
+    strcpy(opt_arg, _opt_arg);
+
+    iunlockput(ip);
+    return 0;
+}
+
 int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
     infof("elf_loader %s", name);
 
     struct inode* ip = inode_by_name(name);
     if (ip == NULL) {
         infof("elf_loader inode_by_name exec failed");
+        return -1;
+    }
+
+    ilock(ip);
+
+    // check elf header
+    if (check_elf_header(ip) < 0) {
+        iunlockput(ip);
+        infof("elf_loader not a elf");
         return -1;
     }
 
@@ -426,8 +496,6 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
 
     // can't revoke the modification from here because the old page table is freed,
     // so we must use panic.
-
-    ilock(ip);
 
     struct elfhdr ehdr[2];
     uint64 base[2];

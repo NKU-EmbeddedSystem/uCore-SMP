@@ -163,7 +163,7 @@ filedup(struct file *f) {
     return f;
 }
 
-static char* fix_cwd_slashes(char *path) {
+char* fix_cwd_slashes(char *path) {
     while(*path) {
         if (path[0] == '.' && path[1] == '/') {
             path += 2;

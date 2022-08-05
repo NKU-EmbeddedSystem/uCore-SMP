@@ -58,6 +58,7 @@ int make_shell_proc();
 int get_app_id_by_name(char *name);
 void loader(int, struct proc *);
 int elf_loader(char*, struct proc *, struct auxv_t *, int *);
+int check_script_header(char *name, char *interp, char *opt_arg);
 
 // proc.c
 struct proc *curr_proc();
@@ -127,6 +128,7 @@ int piperead(struct pipe *, uint64, int);
 int pipewrite(struct pipe *, uint64, int);
 
 // file.c
+char* fix_cwd_slashes(char *path);
 
 // plic.c
 void plicinit(void);
