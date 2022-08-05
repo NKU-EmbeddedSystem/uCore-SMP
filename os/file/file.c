@@ -23,6 +23,7 @@ void mem_device_init();
 void proc_device_init();
 void null_device_init();
 void zero_device_init();
+void mount_device_init();
 
 /**
  * @brief Call xxx_init of all devices
@@ -35,6 +36,7 @@ void device_init() {
     proc_device_init();
     null_device_init();
     zero_device_init();
+    mount_device_init();
 }
 /**
  * @brief Init the global file pool
