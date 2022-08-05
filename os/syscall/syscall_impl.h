@@ -99,6 +99,8 @@ int sys_readv(int fd, struct iovec *iov_va, int iovcnt);
 
 int sys_mprotect(void *addr, size_t len, int prot);
 
+int sys_utimensat(int dirfd, const char *pathname, const struct timeval *times, int flags);
+
 int sys_dummy_success(void);
 
 int sys_dummy_failure(void);

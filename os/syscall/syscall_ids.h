@@ -52,5 +52,8 @@
 #define SYS_geteuid 175
 #define SYS_getgid 176
 #define SYS_getegid 177
+#define SYS_fcntl 25
+#define SYS_rt_sigaction 134
+#define SYS_utimensat 88
 
 #endif // SYSCALL_IDS_H

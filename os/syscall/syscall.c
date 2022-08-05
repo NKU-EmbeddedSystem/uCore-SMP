@@ -100,6 +100,8 @@ char *syscall_names(int id)
         return "SYS_nanosleep";
     case SYS_rt_sigtimedwait:
         return "SYS_rt_sigtimedwait";
+    case SYS_rt_sigaction:
+        return "SYS_rt_sigaction";
     case SYS_prlimit64:
         return "SYS_prlimit64";
     case SYS_mprotect:
@@ -112,6 +114,10 @@ char *syscall_names(int id)
         return "SYS_getgid";
     case SYS_getegid:
         return "SYS_getegid";
+    case SYS_fcntl:
+        return "SYS_fcntl";
+    case SYS_utimensat:
+        return "SYS_utimensat";
     default:
         return "?";
     }
@@ -245,12 +251,18 @@ void syscall()
     case SYS_rt_sigtimedwait:
         ret = sys_dummy_success();
         break;
+    case SYS_rt_sigaction:
+        ret = sys_dummy_success();
+        break;
     case SYS_prlimit64:
         ret = sys_dummy_success();
         break;
-//    case SYS_mprotect:
-//        ret = sys_mprotect((void *)args[0], args[1], args[2]);
-//        break;
+    case SYS_utimensat:
+        ret = sys_utimensat(args[0], (char *)args[1], (struct timeval *)args[2], args[3]);
+        break;
+    case SYS_mprotect:
+        ret = sys_mprotect((void *)args[0], args[1], args[2]);
+        break;
     case SYS_getuid:
         ret = sys_id_dummy();
         break;
@@ -262,6 +274,9 @@ void syscall()
         break;
     case SYS_getegid:
         ret = sys_id_dummy();
+        break;
+    case SYS_fcntl:
+        ret = sys_dummy_success();
         break;
     default:
         ret = -38; // ENOSYS

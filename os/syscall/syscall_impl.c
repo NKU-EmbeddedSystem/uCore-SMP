@@ -1070,6 +1070,22 @@ off_t sys_lseek(int fd, off_t offset, int whence) {
     return filelseek(f, offset, whence);
 }
 
+int sys_utimensat(int dirfd, const char *pathname, const struct timeval times[2], int flags) {
+    int fd = sys_openat(dirfd, pathname, O_RDONLY, 0);
+    if (fd == -2) {
+        infof("sys_utimensat: openat failed, file not exist");
+        return -2;
+    }
+    if (fd < 0) {
+        infof("sys_utimensat: openat failed, internal error");
+        return fd;
+    }
+
+    // open file success, just do nothing and close it
+    sys_close(fd);
+    return 0;
+}
+
 int sys_dummy_success() {
     return 0;
 }
