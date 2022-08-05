@@ -30,11 +30,10 @@ int sys_fstat(int fd, struct kstat *statbuf_va){
 }
 
 int sys_fstatat(int dirfd, const char *pathname, struct kstat *statbuf_va, int flags) {
-
-    int fd = sys_openat(dirfd, pathname, O_RDONLY, 0);
+    int fd = sys_openat(dirfd, pathname, flags, 0);
     if (fd < 0) {
         infof("openat failed");
-        return -1;
+        return fd;
     }
     int ret = sys_fstat(fd, statbuf_va);
     sys_close(fd);

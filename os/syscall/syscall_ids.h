@@ -55,5 +55,6 @@
 #define SYS_fcntl 25
 #define SYS_rt_sigaction 134
 #define SYS_utimensat 88
+#define SYS_syslog 116
 
 #endif // SYSCALL_IDS_H

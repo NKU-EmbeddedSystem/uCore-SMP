@@ -118,6 +118,8 @@ char *syscall_names(int id)
         return "SYS_fcntl";
     case SYS_utimensat:
         return "SYS_utimensat";
+    case SYS_syslog:
+        return "SYS_syslog";
     default:
         return "?";
     }
@@ -276,6 +278,9 @@ void syscall()
         ret = sys_id_dummy();
         break;
     case SYS_fcntl:
+        ret = sys_dummy_success();
+        break;
+    case SYS_syslog:
         ret = sys_dummy_success();
         break;
     default:

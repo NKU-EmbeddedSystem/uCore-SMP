@@ -196,6 +196,13 @@ int fileopen(char *path, int flags) {
     path = fix_cwd_slashes(path);
 
     if (flags & O_CREATE) {
+        // file exists, return -EEXIST
+        if ((ip = inode_by_name(path)) != NULL) {
+            iput(ip);
+            infof("fileopen: file exists");
+            return -17; // -EEXIST
+        }
+        // file does not exist, create it
         ip = create(path, flags & O_DIRECTORY ? T_DIR : T_FILE, 0, 0);
         if (ip == NULL) {
             infof("Cannot create inode");
@@ -209,11 +216,12 @@ int fileopen(char *path, int flags) {
         }
         // the inode is found
         ilock(ip);
-        // ignore O_DIRECTORY for directory
-        if (ip->type == T_DIR && (flags & ~O_DIRECTORY) != O_RDONLY) {
+
+        // if the O_DIRECTORY flag is set, check if the inode is a directory
+        if ((flags & O_DIRECTORY) && ip->type != T_DIR) {
             iunlockput(ip);
-            infof("Can only read a dir");
-            return -1;
+            infof("Can only open a dir if O_DIRECTORY is set");
+            return -20; // -ENOTDIR
         }
     }
 
@@ -249,6 +257,7 @@ int fileopen(char *path, int flags) {
 }
 
 int fileopenat(int dirfd, char *filename, int flags) {
+    infof("fileopenat dirfd=%d, filename=%s, flags=%x", dirfd, filename, flags);
     // remove './' from the beginning of filename
     filename = fix_cwd_slashes(filename);
 

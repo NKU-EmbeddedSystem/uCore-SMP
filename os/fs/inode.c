@@ -1191,6 +1191,7 @@ void inode_test() {
 }
 
 int igetdents(struct inode* dp, char *buf, unsigned long len) {
+    infof("igetdents: %s\n", dp->path);
 
     if (dp->type != T_DIR) {
         infof("igetdents: not a dir (2)");
@@ -1204,10 +1205,10 @@ int igetdents(struct inode* dp, char *buf, unsigned long len) {
     int namelen;
     struct linux_dirent64* curr;
 
-    if ((res = f_rewinddir(&dp->dir)) != FR_OK) {
-        infof("igetdents: f_rewinddir failed: %d", res);
-        return -1;
-    }
+//    if ((res = f_rewinddir(&dp->dir)) != FR_OK) {
+//        infof("igetdents: f_rewinddir failed: %d", res);
+//        return -1;
+//    }
 
     curr = (struct linux_dirent64*)buf;
 
@@ -1222,14 +1223,14 @@ int igetdents(struct inode* dp, char *buf, unsigned long len) {
         }
 
         namelen = strlen(fno.fname);
-        if ((uint64)curr + sizeof(struct linux_dirent64) + namelen > (uint64)buf + len) {
+        if ((uint64)curr + sizeof(struct linux_dirent64) + namelen + 1 > (uint64)buf + len) {
             infof("igetdents: buffer overflow");
             return -1;
         }
-        // fat32 not depends on ino & off
+        // fat32 not depends on ino
         curr->d_ino = 0;
-        curr->d_off = 0;
-        curr->d_reclen = sizeof(struct linux_dirent64) + namelen;
+        curr->d_off = ((uint64)curr - (uint64)buf) + sizeof(struct linux_dirent64) + namelen + 1;
+        curr->d_reclen = sizeof(struct linux_dirent64) + namelen + 1;
         // only support distinguish regular file and directory now
         curr->d_type = fno.fattrib & AM_DIR ? DT_DIR : DT_REG;
         strcpy(curr->d_name, fno.fname);
@@ -1241,14 +1242,18 @@ int igetdents(struct inode* dp, char *buf, unsigned long len) {
 }
 
 int stati(struct inode *ip, struct kstat *st) {
+    infof("stati: %s type: %d", ip->path, ip->type);
     memset(st, 0, sizeof(struct kstat));
     st->st_dev = ip->dev;
     // fat32 doesn't support hardlink, so nlink must be 1
     st->st_nlink = 1;
-    // fill st_mode according to inode type
+    // fill st_blksize
+    st->st_blksize = BSIZE;
+    // fill st_mode and st_size according to inode type
     switch (ip->type) {
         case T_DIR:
             st->st_mode = S_IFDIR;
+            st->st_size = 4;
             break;
         case T_FILE:
             st->st_mode = S_IFREG;
@@ -1256,8 +1261,10 @@ int stati(struct inode *ip, struct kstat *st) {
             break;
         case T_DEVICE:
             st->st_mode = S_IFCHR;
+            st->st_size = f_size(&ip->file);
             break;
     }
+    st->st_blocks = 512;
     return 0;
 }
 
