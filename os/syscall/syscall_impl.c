@@ -809,6 +809,9 @@ int sys_dup3(int oldfd, int newfd, int flags) {
         return newfd;
     }
 
+    // try close new fd
+    sys_close(newfd);
+
     if ((fd = fdalloc2(f, newfd)) < 0) {
         infof("cannot allocate new fd");
         return -1;
