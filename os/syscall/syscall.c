@@ -122,6 +122,8 @@ char *syscall_names(int id)
         return "SYS_syslog";
     case SYS_faccessat:
         return "SYS_faccessat";
+    case SYS_renameat2:
+        return "SYS_renameat2";
     default:
         return "?";
     }
@@ -272,6 +274,9 @@ void syscall()
         break;
     case SYS_kill:
         ret = sys_kill((pid_t)args[0], args[1]);
+        break;
+    case SYS_renameat2:
+        ret = sys_renameat2(args[0], (char *)args[1], args[2], (char *)args[3], args[4]);
         break;
     case SYS_getuid:
         ret = sys_id_dummy();

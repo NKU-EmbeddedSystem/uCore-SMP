@@ -486,6 +486,7 @@ struct inode *iget_root() {
     inode_ptr->type = T_DIR;
     strcpy(inode_ptr->path, "/");
     inode_ptr->unlinked = 0;
+    inode_ptr->new_path[0] = '\0';
 
 //    acquire(&itable.lock);
     release_mutex_sleep(&itable.lock);
@@ -526,12 +527,20 @@ void iput(struct inode *ip) {
             }
         }
         // delete file/directory if it is unlinked
+        // or rename to a new path
         if (ip->unlinked) {
             infof("iput: deleting file %s\n", ip->path);
             FRESULT result = f_unlink(ip->path);
             if (result != FR_OK) {
                 printf("iput: f_unlink failed, result = %d\n", result);
                 panic("iput: f_unlink failed");
+            }
+        } else if (strlen(ip->new_path) != 0) {
+            infof("iput: renaming file %s to %s\n", ip->path, ip->new_path);
+            FRESULT result = f_rename(ip->path, ip->new_path);
+            if (result != FR_OK) {
+                printf("iput: f_rename failed, result = %d\n", result);
+                panic("iput: f_rename failed");
             }
         }
     }
@@ -966,6 +975,7 @@ dirlookup(struct inode *dp, char *name) {
         inode_ptr->type = T_DIR;
         strcpy(inode_ptr->path, path);
         inode_ptr->unlinked = 0;
+        inode_ptr->new_path[0] = '\0';
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -990,6 +1000,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->device.minor = devinfo.minor;
             strcpy(inode_ptr->path, path);
             inode_ptr->unlinked = 0;
+            inode_ptr->new_path[0] = '\0';
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             return inode_ptr;
@@ -1012,6 +1023,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->type = T_FILE;
             strcpy(inode_ptr->path, symlink_info.path);
             inode_ptr->unlinked = 0;
+            inode_ptr->new_path[0] = '\0';
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             ienable_fastseek(inode_ptr);
@@ -1024,6 +1036,7 @@ dirlookup(struct inode *dp, char *name) {
             inode_ptr->type = T_FILE;
             strcpy(inode_ptr->path, path);
             inode_ptr->unlinked = 0;
+            inode_ptr->new_path[0] = '\0';
 //            release(&itable.lock);
             release_mutex_sleep(&itable.lock);
             ienable_fastseek(inode_ptr);
@@ -1099,6 +1112,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->type = T_DIR;
         strcpy(inode_ptr->path, path);
         inode_ptr->unlinked = 0;
+        inode_ptr->new_path[0] = '\0';
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -1117,6 +1131,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->type = T_FILE;
         strcpy(inode_ptr->path, path);
         inode_ptr->unlinked = 0;
+        inode_ptr->new_path[0] = '\0';
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         ienable_fastseek(inode_ptr);
@@ -1146,6 +1161,7 @@ icreate(struct inode *dp, char *name, int type, int major, int minor) {
         inode_ptr->device.minor = minor;
         strcpy(inode_ptr->path, path);
         inode_ptr->unlinked = 0;
+        inode_ptr->new_path[0] = '\0';
 //        release(&itable.lock);
         release_mutex_sleep(&itable.lock);
         return inode_ptr;
@@ -1298,4 +1314,15 @@ void itrunc(struct inode *ip) {
     KERNEL_ASSERT(ip->type == T_FILE, "itrunc: not a file");
     KERNEL_ASSERT(f_rewind(&ip->file) == FR_OK, "itrunc: f_rewind failed");
     KERNEL_ASSERT(f_truncate(&ip->file) == FR_OK, "itrunc: f_truncate failed");
+}
+
+int ipath(struct inode *ip, char *path) {
+    strcpy(path, ip->path);
+    return 0;
+}
+
+int irename(struct inode *ip, const char *new_path) {
+    infof("irename: %s to %s", ip->path, new_path);
+    strcpy(ip->new_path, new_path);
+    return 0;
 }

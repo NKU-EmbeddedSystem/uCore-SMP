@@ -36,6 +36,7 @@ struct inode {
 
     char path[MAXPATH]; // absolute path
     bool unlinked;      // has been unlinked
+    char new_path[MAXPATH]; // absolute path, if it has been renamed
     uint32 clmt[NFASTSEEK]; // cluster link map table buffer, for fatfs fast seek
 };
 
@@ -100,5 +101,9 @@ int stati(struct inode *ip, struct kstat *st);
 int ilink(struct inode *oldip, struct inode *newip);
 
 int iunlink(struct inode *ip);
+
+int ipath(struct inode *ip, char *path);
+
+int irename(struct inode *ip, const char *new_path);
 
 #endif // INODE_H

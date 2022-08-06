@@ -1103,6 +1103,52 @@ int sys_kill(pid_t pid, int sig) {
     return kill(pid);
 }
 
+int sys_renameat2(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags) {
+
+    struct proc *p = curr_proc();
+    char old[MAXPATH];
+    char new[MAXPATH];
+    copyinstr(p->pagetable, old, (uint64)oldpath, MAXPATH);
+    copyinstr(p->pagetable, new, (uint64)newpath, MAXPATH);
+
+    int oldfd = -1, newfd = -1, ret;
+    struct file * file_old = NULL, *file_new = NULL;
+    char path_new[MAXPATH];
+
+    oldfd = fileopenat(olddirfd, old, O_RDONLY);
+    if (oldfd < 0) {
+        infof("sys_linkat: open old:%s failed", old);
+        ret = oldfd;
+        goto end;
+    }
+
+    // try to create the new file
+    newfd = fileopenat(newdirfd, new, O_CREAT);
+    if (newfd < 0) {
+        infof("sys_linkat: open new:%s failed", new);
+        ret = newfd;
+        goto end;
+    }
+
+    file_old = get_proc_file_by_fd(p, oldfd);
+    file_new = get_proc_file_by_fd(p, newfd);
+    KERNEL_ASSERT(file_old != NULL && file_new != NULL, "sys_linkat: file is NULL, data is corrupted");
+
+    // copy out the full path
+    filepath(file_new, path_new);
+
+    fileunlink(file_new);
+    sys_close(newfd);
+
+    ret = filerename(file_old, path_new);
+
+end:
+    if (oldfd >= 0) {
+        sys_close(oldfd);
+    }
+    return ret;
+}
+
 int sys_dummy_success() {
     return 0;
 }

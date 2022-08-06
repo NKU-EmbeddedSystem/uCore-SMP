@@ -83,6 +83,8 @@ int filelink(struct file *oldfile, struct file *newfile);
 int fileunlink(struct file *file);
 void fileclear(struct file *f);
 int filelseek(struct file *f, off_t offset, int whence);
+int filepath(struct file *file, char *path);
+int filerename(struct file *file, char *new_path);
 #define FILE_MAX (128 * 16)
 
 #define CONSOLE 1

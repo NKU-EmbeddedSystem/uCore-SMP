@@ -513,3 +513,25 @@ int filelseek(struct file *f, off_t offset, int whence) {
     iunlock(f->ip);
     return off;
 }
+
+int filepath(struct file *file, char *path) {
+    if (file->type != FD_INODE) {
+        infof("filepath: not a inode");
+        return -1;
+    }
+    ilock(file->ip);
+    int result = ipath(file->ip, path);
+    iunlock(file->ip);
+    return result;
+}
+
+int filerename(struct file *file, char *new_path) {
+    if (file->type != FD_INODE) {
+        infof("filerename: not a inode");
+        return -1;
+    }
+    ilock(file->ip);
+    int result = irename(file->ip, new_path);
+    iunlock(file->ip);
+    return result;
+}

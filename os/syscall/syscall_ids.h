@@ -43,6 +43,7 @@
 #define SYS_spawn 400
 #define SYS_mailread 401
 #define SYS_mailwrite 402
+#define SYS_renameat2 276
 
 // dummy syscall
 #define SYS_rt_sigtimedwait 137
