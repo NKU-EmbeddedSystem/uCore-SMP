@@ -117,3 +117,20 @@ char* strcat(char *s, const char *t) {
     while ((*s++ = *t++) != 0);
     return os;
 }
+
+char *itoa(int n, char *s, int b) {
+    int i, sign;
+    char *t;
+
+    if ((sign = n) < 0)
+        n = -n;
+    i = 0;
+    do
+        s[i++] = n % b + '0';
+    while ((n /= b) > 0);
+    if (sign < 0)
+        s[i++] = '-';
+    t = s + i;
+    *--t = 0;
+    return t;
+}
