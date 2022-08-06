@@ -71,6 +71,6 @@ int64 proc_read(char *dst, int64 len, int to_user)
 
 void proc_device_init()
 {
-    device_rw_handler[PROC_DEVICE].read = proc_read;
-    device_rw_handler[PROC_DEVICE].write = proc_write;
+    device_handler[PROC_DEVICE].read = proc_read;
+    device_handler[PROC_DEVICE].write = proc_write;
 }

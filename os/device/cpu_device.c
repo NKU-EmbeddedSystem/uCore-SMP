@@ -53,6 +53,6 @@ int64 cpu_read(char *dst, int64 len, int to_user)
 
 void cpu_device_init()
 {
-    device_rw_handler[CPU_DEVICE].read = cpu_read;
-    device_rw_handler[CPU_DEVICE].write = cpu_write;
+    device_handler[CPU_DEVICE].read = cpu_read;
+    device_handler[CPU_DEVICE].write = cpu_write;
 }

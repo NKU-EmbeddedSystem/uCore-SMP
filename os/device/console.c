@@ -3,8 +3,8 @@
 #include <utils/log.h>
 #include "console.h"
 void console_init(){
-    device_rw_handler[CONSOLE].read = console_read;
-    device_rw_handler[CONSOLE].write = console_write;
+    device_handler[CONSOLE].read = console_read;
+    device_handler[CONSOLE].write = console_write;
 }
 
 

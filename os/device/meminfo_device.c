@@ -3,8 +3,8 @@
 #include "meminfo_device.h"
 
 void meminfo_device_init() {
-    device_rw_handler[MEMINFO_DEVICE].read = meminfo_read;
-    device_rw_handler[MEMINFO_DEVICE].write = meminfo_write;
+    device_handler[MEMINFO_DEVICE].read = meminfo_read;
+    device_handler[MEMINFO_DEVICE].write = meminfo_write;
 }
 
 int64 meminfo_write(char *src, int64 len, int from_user) {

@@ -2,8 +2,8 @@
 #include "zero_device.h"
 
 void zero_device_init() {
-    device_rw_handler[ZERO_DEVICE].read = zero_read;
-    device_rw_handler[ZERO_DEVICE].write = zero_write;
+    device_handler[ZERO_DEVICE].read = zero_read;
+    device_handler[ZERO_DEVICE].write = zero_write;
 }
 
 int64 zero_write(char *src, int64 len, int from_user) {

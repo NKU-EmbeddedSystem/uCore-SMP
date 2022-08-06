@@ -105,6 +105,10 @@ int sys_faccessat(int dirfd, char *pathname, int mode, int flags);
 
 int sys_kill(pid_t pid, int sig);
 
+int sys_renameat2(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags);
+
+int sys_ioctl(int fd, int request, void *arg);
+
 int sys_dummy_success(void);
 
 int sys_dummy_failure(void);

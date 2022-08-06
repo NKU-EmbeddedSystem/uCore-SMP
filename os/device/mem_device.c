@@ -35,6 +35,6 @@ int64 mem_read(char *dst, int64 len, int to_user)
 
 void mem_device_init()
 {
-    device_rw_handler[MEM_DEVICE].read = mem_read;
-    device_rw_handler[MEM_DEVICE].write = mem_write;
+    device_handler[MEM_DEVICE].read = mem_read;
+    device_handler[MEM_DEVICE].write = mem_write;
 }

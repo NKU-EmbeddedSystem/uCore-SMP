@@ -16,7 +16,7 @@ struct {
     struct file files[FILE_MAX];    // system level files
     struct spinlock lock;
 } filepool;
-struct device_rw_handler device_rw_handler[NDEV];
+struct device_handler device_handler[NDEV];
 void console_init();
 void cpu_device_init();
 void mem_device_init();
@@ -25,6 +25,7 @@ void null_device_init();
 void zero_device_init();
 void mount_device_init();
 void meminfo_device_init();
+void rtc_device_init();
 
 /**
  * @brief Call xxx_init of all devices
@@ -39,6 +40,7 @@ void device_init() {
     zero_device_init();
     mount_device_init();
     meminfo_device_init();
+    rtc_device_init();
 }
 /**
  * @brief Init the global file pool
@@ -315,9 +317,9 @@ ssize_t filewrite(struct file *f, void* src_va, size_t len) {
     if (f->type == FD_PIPE) {
         ret = pipewrite(f->pipe, (uint64)src_va, len);
     } else if (f->type == FD_DEVICE) {
-        if (f->major < 0 || f->major >= NDEV || !device_rw_handler[f->major].write)
+        if (f->major < 0 || f->major >= NDEV || !device_handler[f->major].write)
             return -1;
-        ret = device_rw_handler[f->major].write((char*)src_va, len, TRUE);
+        ret = device_handler[f->major].write((char*)src_va, len, TRUE);
     } else if (f->type == FD_INODE) {
         // write a few blocks at a time to avoid exceeding
         // the maximum log transaction size, including
@@ -362,9 +364,9 @@ ssize_t fileread(struct file *f, void* dst_va, size_t len) {
     if (f->type == FD_PIPE) {
         r = piperead(f->pipe, (uint64)dst_va, len);
     } else if (f->type == FD_DEVICE) {
-        if (f->major < 0 || f->major >= NDEV || !device_rw_handler[f->major].read)
+        if (f->major < 0 || f->major >= NDEV || !device_handler[f->major].read)
             return -1;
-        r = device_rw_handler[f->major].read( dst_va, len, TRUE);
+        r = device_handler[f->major].read(dst_va, len, TRUE);
     } else if (f->type == FD_INODE) {
         ilock(f->ip);
         if ((r = readi(f->ip, TRUE, dst_va, f->off, len)) > 0)
@@ -405,6 +407,18 @@ int filestat(struct file *f, uint64 addr) {
     }
 
     return 0;
+}
+
+int fileioctl(struct file *f, int cmd, void *arg) {
+    if (f->type != FD_DEVICE) {
+        infof("fileioctl: not a device");
+        return -1;
+    }
+
+    if (f->major < 0 || f->major >= NDEV || !device_handler[f->major].ioctl)
+        return -1;
+
+    return device_handler[f->major].ioctl(f, TRUE, cmd, arg);
 }
 
 

@@ -17,12 +17,13 @@
 #define SEEK_END 2
 
 // map major device number to device functions.
-struct device_rw_handler {
+struct device_handler {
     int64 (*read)(char *dst, int64 len, int to_user);
     int64 (*write)(char *src, int64 len, int from_user);
+    int (*ioctl)(struct file* f, int is_user, int cmd, void *arg);
 };
 
-extern struct device_rw_handler device_rw_handler[];
+extern struct device_handler device_handler[];
 
 struct pipe {
     char data[PIPESIZE];
@@ -85,6 +86,7 @@ void fileclear(struct file *f);
 int filelseek(struct file *f, off_t offset, int whence);
 int filepath(struct file *file, char *path);
 int filerename(struct file *file, char *new_path);
+int fileioctl(struct file *f, int cmd, void *arg);
 #define FILE_MAX (128 * 16)
 
 #define CONSOLE 1
@@ -95,5 +97,6 @@ int filerename(struct file *file, char *new_path);
 #define ZERO_DEVICE 6
 #define MOUNT_DEVICE 7
 #define MEMINFO_DEVICE 8
+#define RTC_DEVICE 9
 
 #endif //!__FILE_H__

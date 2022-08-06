@@ -1146,6 +1146,17 @@ end:
     return ret;
 }
 
+int sys_ioctl(int fd, int request, void *arg) {
+    struct file *f;
+    struct proc *p = curr_proc();
+    f = get_proc_file_by_fd(p, fd);
+    if (f == NULL) {
+        infof("sys_ioctl: fd=%d is not valid", fd);
+        return -1;
+    }
+    return fileioctl(f, request, arg);
+}
+
 int sys_dummy_success() {
     return 0;
 }

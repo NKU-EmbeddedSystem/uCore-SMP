@@ -2,8 +2,8 @@
 #include "mount_device.h"
 
 void mount_device_init() {
-    device_rw_handler[MOUNT_DEVICE].read = mount_read;
-    device_rw_handler[MOUNT_DEVICE].write = mount_write;
+    device_handler[MOUNT_DEVICE].read = mount_read;
+    device_handler[MOUNT_DEVICE].write = mount_write;
 }
 
 int64 mount_write(char *src, int64 len, int from_user) {

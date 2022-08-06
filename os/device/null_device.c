@@ -2,8 +2,8 @@
 #include "null_device.h"
 
 void null_device_init() {
-    device_rw_handler[NULL_DEVICE].read = null_read;
-    device_rw_handler[NULL_DEVICE].write = null_write;
+    device_handler[NULL_DEVICE].read = null_read;
+    device_handler[NULL_DEVICE].write = null_write;
 }
 
 int64 null_write(char *src, int64 len, int from_user) {
