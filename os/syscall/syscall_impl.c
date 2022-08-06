@@ -413,7 +413,7 @@ int sys_linkat(int olddirfd, char *oldpath, int newdirfd, char *newpath, int fla
         ret = -1;
         goto end;
     }
-    newfd = fileopenat(newdirfd, new, O_WRONLY | O_CREATE);
+    newfd = fileopenat(newdirfd, new, O_WRONLY | O_CREAT);
     if (newfd < 0) {
         infof("sys_linkat: open new %s failed", new);
         ret = -1;
@@ -824,7 +824,7 @@ int sys_getdents(int fd, struct linux_dirent64 *dirp64, unsigned long len) {
     struct proc *p = curr_proc();
     f = get_proc_file_by_fd(p, fd);
     if (f == NULL) {
-        infof("fd is not valid");
+        infof("sys_getdents: fd=%d is not valid", fd);
         print_proc(p);
         return -1;
     }
@@ -973,7 +973,7 @@ int sys_writev(int fd, struct iovec *iov_va, int iovcnt) {
     struct proc *p = curr_proc();
     f = get_proc_file_by_fd(p, fd);
     if (f == NULL) {
-        infof("fd is not valid");
+        infof("sys_writev: fd=%d is not valid", fd);
         return -1;
     }
 
@@ -1001,7 +1001,7 @@ int sys_readv(int fd, struct iovec *iov_va, int iovcnt) {
     struct proc *p = curr_proc();
     f = get_proc_file_by_fd(p, fd);
     if (f == NULL) {
-        infof("fd is not valid");
+        infof("sys_readv: fd=%d is not valid", fd);
         return -1;
     }
 
@@ -1066,7 +1066,7 @@ off_t sys_lseek(int fd, off_t offset, int whence) {
     struct proc *p = curr_proc();
     f = get_proc_file_by_fd(p, fd);
     if (f == NULL) {
-        infof("fd is not valid");
+        infof("sys_lseek: fd=%d is not valid", fd);
         return -1;
     }
     return filelseek(f, offset, whence);

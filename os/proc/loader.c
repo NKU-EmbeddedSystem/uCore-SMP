@@ -216,7 +216,7 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *inode, uint offset, uint
         }
         pa = pa_align + (va_begin - va_align);
         copy_size = va_end - va_begin;
-        infof("loadseg: copy prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
+//        infof("loadseg: copy prefix part: va = %p, pa = %p, size = %p", va_begin, pa, copy_size);
         if(readi(inode, 0, (void*)pa, offset + temp_size, copy_size) != copy_size) {
             infof("loadseg: readi error, read offset: %x, read size: %x", offset + temp_size, copy_size);
             return -1;
@@ -237,7 +237,7 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *inode, uint offset, uint
             panic("loadseg: address should exist");
         }
         copy_size = MIN(PGSIZE, va_end - i);
-        infof("loadseg: copy middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
+//        infof("loadseg: copy middle part: va = %p, pa = %p, size = %p", i, pa, copy_size);
         if(readi(inode, 0, (void*)pa, offset + temp_size, copy_size) != copy_size) {
             infof("loadseg: readi error, read offset: %x, read size: %x", offset + temp_size);
             return -1;

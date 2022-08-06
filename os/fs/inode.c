@@ -17,7 +17,7 @@ struct {
 static int cache_writeback(struct page_cache* cache);
 
 static int ctable_lru_evict() {
-    infof("ctable_lru_evict");
+//    infof("ctable_lru_evict");
     for (int i = NCACHE - 1; i>=0;i--) {
         struct page_cache* cache = ctable.lru[i];
         if (cache &&                                        // cache entry exists
@@ -49,7 +49,7 @@ static int ctable_lru_evict() {
 }
 
 static int ctable_lru_add(struct page_cache* cache) {
-    infof("ctable_lru_add");
+//    infof("ctable_lru_add");
     int i;
     if (ctable.lru[NCACHE-1] != NULL && ctable_lru_evict() < 0) {
         infof("ctable_lru_add: ctable_lru_evict error");
@@ -63,7 +63,7 @@ static int ctable_lru_add(struct page_cache* cache) {
 }
 
 static int ctable_lru_remove(struct page_cache* cache) {
-    infof("ctable_lru_remove");
+//    infof("ctable_lru_remove");
     for (int i = 0; i < NCACHE; i++) {
         if (ctable.lru[i] == cache) {
             for (int j = i; j < NCACHE - 1; j++) {
@@ -78,7 +78,7 @@ static int ctable_lru_remove(struct page_cache* cache) {
 }
 
 static int ctable_lru_adjust(struct page_cache* cache) {
-    infof("ctable_lru_adjust");
+//    infof("ctable_lru_adjust");
     for (int i = 0; i < NCACHE; i++) {
         if (ctable.lru[i] == cache) {
             for (int j = i; j > 0; j--) {
@@ -93,7 +93,7 @@ static int ctable_lru_adjust(struct page_cache* cache) {
 }
 
 struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
-    infof("ctable_acquire, ip: %p, offset: %d", ip, offset);
+//    infof("ctable_acquire, ip: %p, offset: %d", ip, offset);
     KERNEL_ASSERT(ip != NULL, "inode is NULL");
     KERNEL_ASSERT((offset & (PGSIZE - 1)) == 0, "offset is not aligned");
 
@@ -104,7 +104,7 @@ struct page_cache* ctable_acquire(struct inode* ip, uint offset) {
     for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
         acquire_mutex_sleep(&cache->lock);
         if (cache->valid && cache->host == ip && cache->offset == offset) {
-            infof("reuse cache");
+//            infof("reuse cache");
             ctable_lru_adjust(cache);
             release_mutex_sleep(&ctable.lock);
             return cache;
@@ -117,7 +117,7 @@ find_again:
     for (cache = ctable.cache; cache < ctable.cache + NCACHE; cache++) {
         acquire_mutex_sleep(&cache->lock);
         if (!cache->valid) {
-            infof("create cache");
+//            infof("create cache");
             cache->host = ip;
             cache->offset = offset;
             cache->valid = TRUE;
@@ -146,7 +146,7 @@ read_page:
     }
 
     UINT size;
-    if (f_read(&ip->file, cache->page, PAGE_SIZE, &size) != FR_OK || size == 0) {
+    if (f_read(&ip->file, cache->page, PAGE_SIZE, &size) != FR_OK) {
         infof("ctable_acquire: read error");
         goto read_page_err;
     }
@@ -500,7 +500,7 @@ struct inode *iget_root() {
 // All calls to iput() must be inside a transaction in
 // case it has to free the inode.
 void iput(struct inode *ip) {
-    tracecore("iput");
+//    tracecore("iput");
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 //    acquire(&itable.lock);
     acquire_mutex_sleep(&itable.lock);
@@ -544,7 +544,7 @@ void iput(struct inode *ip) {
 // Returns ip to enable ip = idup(ip1) idiom.
 struct inode *
 idup(struct inode *ip) {
-    tracecore("idup");
+//    tracecore("idup");
     KERNEL_ASSERT(ip != NULL, "inode can not be NULL");
 //    acquire(&itable.lock);
     acquire_mutex_sleep(&itable.lock);
@@ -915,12 +915,12 @@ inode_or_parent_by_name(char *path, int nameiparent, char *name) {
 //}
 
 static void ienable_fastseek(struct inode *ip) {
-    KERNEL_ASSERT(ip != NULL, "ienable_fastseek: inode is NULL");
-    KERNEL_ASSERT(ip->type == T_FILE, "ienable_fastseek: inode is not a file");
-    ip->clmt[0] = NFASTSEEK;
-    ip->file.cltbl = ip->clmt;
-    FRESULT res = f_lseek(&ip->file, CREATE_LINKMAP);
-    KERNEL_ASSERT(res == FR_OK, "ienable_fastseek: enable_fastseek failed");
+//    KERNEL_ASSERT(ip != NULL, "ienable_fastseek: inode is NULL");
+//    KERNEL_ASSERT(ip->type == T_FILE, "ienable_fastseek: inode is not a file");
+//    ip->clmt[0] = NFASTSEEK;
+//    ip->file.cltbl = ip->clmt;
+//    FRESULT res = f_lseek(&ip->file, CREATE_LINKMAP);
+//    KERNEL_ASSERT(res == FR_OK, "ienable_fastseek: enable_fastseek failed");
 }
 
 struct inode *
@@ -1264,7 +1264,7 @@ int stati(struct inode *ip, struct kstat *st) {
             st->st_size = f_size(&ip->file);
             break;
     }
-    st->st_blocks = 512;
+    st->st_blocks = ROUNDUP(st->st_size, BSIZE) / BSIZE;
     return 0;
 }
 
@@ -1291,4 +1291,11 @@ int iunlink(struct inode *ip) {
     // when there's no reference to the inode, the file will be deleted
     ip->unlinked = 1;
     return 0;
+}
+
+void itrunc(struct inode *ip) {
+    infof("itrunc: %s", ip->path);
+    KERNEL_ASSERT(ip->type == T_FILE, "itrunc: not a file");
+    KERNEL_ASSERT(f_rewind(&ip->file) == FR_OK, "itrunc: f_rewind failed");
+    KERNEL_ASSERT(f_truncate(&ip->file) == FR_OK, "itrunc: f_truncate failed");
 }

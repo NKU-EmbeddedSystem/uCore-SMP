@@ -197,13 +197,7 @@ int fileopen(char *path, int flags) {
     // remove './' & '.' from the beginning of path
     path = fix_cwd_slashes(path);
 
-    if (flags & O_CREATE) {
-        // file exists, return -EEXIST
-        if ((ip = inode_by_name(path)) != NULL) {
-            iput(ip);
-            infof("fileopen: file exists");
-            return -17; // -EEXIST
-        }
+    if (flags & O_CREAT) {
         // file does not exist, create it
         ip = create(path, flags & O_DIRECTORY ? T_DIR : T_FILE, 0, 0);
         if (ip == NULL) {
@@ -238,6 +232,7 @@ int fileopen(char *path, int flags) {
         iunlockput(ip);
         return -1;
     }
+    infof("fileopen: alloc fd %d\n", fd);
 
     if (ip->type == T_DEVICE) {
         f->type = FD_DEVICE;
@@ -250,11 +245,21 @@ int fileopen(char *path, int flags) {
     f->readable = !(flags & O_WRONLY);
     f->writable = (flags & O_WRONLY) || (flags & O_RDWR);
 
-//    if ((flags & O_TRUNC) && ip->type == T_FILE) {
-//        itrunc(ip);
-//    }
+    // solve other flags
+    if ((flags & O_TRUNC) && ip->type == T_FILE) {
+        itrunc(ip);
+        f->off = 0;
+    }
+
+    if ((flags & O_APPEND) && ip->type == T_FILE) {
+        struct kstat stat;
+        stati(ip, &stat);
+        f->off = stat.st_size;
+    }
 
     iunlock(ip);
+
+    infof("fileopen success, fd=%d", fd);
     return fd;
 }
 

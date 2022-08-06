@@ -116,8 +116,42 @@ int test_busybox_read_testcases(char *testcases_buf, char *testcases[]) {
 int test_busybox() {
     char *argv[10] = {"busybox", "sh", "-c"}; // up to 10 arguments
     char testcases_buf[1024];
-    char *testcases[100] = {0};
-    int n = test_busybox_read_testcases(testcases_buf, testcases);
+//    char *testcases[100] = {0};
+//    int n = test_busybox_read_testcases(testcases_buf, testcases);
+
+    char *testcases[] = {
+//            "touch test.txt",
+//            "echo \"hello world\" > test.txt",
+//            "cat test.txt",
+//            "cut -c 3 test.txt",
+//            "od test.txt",
+//            "head test.txt",
+//            "tail test.txt",
+//            "hexdump -C test.txt",
+//            "md5sum test.txt",
+//            "echo \"ccccccc\" >> test.txt",
+//            "echo \"bbbbbbb\" >> test.txt",
+//            "echo \"aaaaaaa\" >> test.txt",
+//            "echo \"2222222\" >> test.txt",
+//            "echo \"1111111\" >> test.txt",
+//            "echo \"bbbbbbb\" >> test.txt",
+            "sort test.txt | ./busybox uniq",
+            "stat test.txt",
+            "strings test.txt",
+            "wc test.txt",
+            "[ -f test.txt ]",
+            "more test.txt",
+            "rm test.txt",
+            "mkdir test_dir",
+            "mv test_dir test",
+            "rmdir test",
+            "grep hello busybox_cmd.txt",
+            "cp busybox_cmd.txt busybox_cmd.bak",
+            "rm busybox_cmd.bak",
+            "find -name \"busybox_cmd.txt\"",
+    };
+
+    int n = sizeof(testcases) / sizeof(char *);
 
     for (int i = 0; i < n; i++) {
         char line[256];
@@ -141,12 +175,11 @@ void run_busybox() {
 int main() {
 
     // create /dev directory
-    int fd_dir = open("/dev", O_DIRECTORY | O_CREATE);
-    if (fd_dir < 0) {
-        printf("Shell: can not open /dev\n");
-        return -1;
+    int fd_dir = open("/dev", O_DIRECTORY | O_CREAT);
+    if (fd_dir >= 0) {
+        close(fd_dir);
     }
-    close(fd_dir);
+
 
     if (open("/dev/console", O_RDWR) < 0) {
         mknod("/dev/console", 1, 0);
@@ -156,49 +189,25 @@ int main() {
     dup(0); // stdout
     dup(0); // stderr
 
-    if (open("/dev/cpu", O_RDWR) < 0) {
-        mknod("/dev/cpu", 2, 0);
-        // open("cpu", O_RDWR);
-    }
-    if (open("/dev/mem", O_RDWR) < 0) {
-        mknod("/dev/mem", 3, 0);
-        // open("mem", O_RDWR);
-    }
-    if (open("/dev/proc", O_RDWR) < 0) {
-        mknod("/dev/proc", 4, 0);
-        // open("proc", O_RDWR);
-    }
-    if (open("/dev/null", O_RDWR) < 0) {
-        mknod("/dev/null", 5, 0);
-        // open("null", O_RDWR);
-    }
-    if (open("/dev/zero", O_RDWR) < 0) {
-        mknod("/dev/zero", 6, 0);
-        // open("zero", O_RDWR);
+    mknod("/dev/cpu", 2, 0);
+    mknod("/dev/mem", 3, 0);
+    mknod("/dev/proc", 4, 0);
+    mknod("/dev/null", 5, 0);
+    mknod("/dev/zero", 6, 0);
+
+
+    // create /proc directory
+    fd_dir = open("/proc", O_DIRECTORY | O_CREATE);
+    if (fd_dir >= 0) {
+        close(fd_dir);
     }
 
-//    // create /lib directory
-//    fd_dir = open("/lib", O_DIRECTORY | O_CREATE);
-//    if (fd_dir < 0) {
-//        printf("Shell: can not open /lib\n");
-//        return -1;
-//    }
-//    close(fd_dir);
-//
-//    // create /tmp directory
-//    fd_dir = open("/tmp", O_DIRECTORY | O_CREATE);
-//    if (fd_dir < 0) {
-//        printf("Shell: can not open /tmp\n");
-//        return -1;
-//    }
-//    close(fd_dir);
-//
-//    // link dynamic library to /lib directory
-//    link("/libc.so", "/lib/ld-musl-riscv64-sf.so.1");
-//    link("/libdlopen_dso.so", "/lib/libdlopen_dso.so");
-//    link("/libtls_align_dso.so", "/lib/libtls_align_dso.so");
-//    link("/libtls_get_new-dtv_dso.so", "/lib/libtls_get_new-dtv_dso.so");
-//    link("libtls_init_dso.so", "/lib/libtls_init_dso.so");
+    mknod("/proc/mounts", 7, 0);
+    mknod("/proc/meminfo", 8, 0);
+
+    // link busybox as ls, so the command "which ls" can work correctly
+    link("/busybox", "/ls");
+
 
 //    test_lua();
     test_busybox();
