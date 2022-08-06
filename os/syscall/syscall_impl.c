@@ -1099,6 +1099,10 @@ int sys_faccessat(int dirfd, char *pathname, int mode, int flags) {
     return 0;
 }
 
+int sys_kill(pid_t pid, int sig) {
+    return kill(pid);
+}
+
 int sys_dummy_success() {
     return 0;
 }

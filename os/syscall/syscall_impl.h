@@ -103,6 +103,8 @@ int sys_utimensat(int dirfd, const char *pathname, const struct timeval *times, 
 
 int sys_faccessat(int dirfd, char *pathname, int mode, int flags);
 
+int sys_kill(pid_t pid, int sig);
+
 int sys_dummy_success(void);
 
 int sys_dummy_failure(void);

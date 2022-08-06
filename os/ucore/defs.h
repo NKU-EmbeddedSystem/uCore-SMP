@@ -75,6 +75,7 @@ void init_scheduler();
 int fdalloc(struct file *);
 int fdalloc2(struct file *, int);
 
+// physical.c
 uint64 get_free_page_count();
 void *alloc_physical_page(void);
 void recycle_physical_page(void *);
@@ -82,6 +83,9 @@ void kinit(void);
 void dup_physical_page(void *pa);
 void put_physical_page(void *pa);
 uint8 get_physical_page_ref(void *pa);
+
+// kill.c
+int kill(int pid);
 
 // vm.c
 void kvminit(void);

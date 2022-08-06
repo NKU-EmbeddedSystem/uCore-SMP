@@ -270,6 +270,9 @@ void syscall()
     case SYS_faccessat:
         ret = sys_faccessat(args[0], (char *)args[1], args[2], args[3]);
         break;
+    case SYS_kill:
+        ret = sys_kill((pid_t)args[0], args[1]);
+        break;
     case SYS_getuid:
         ret = sys_id_dummy();
         break;
