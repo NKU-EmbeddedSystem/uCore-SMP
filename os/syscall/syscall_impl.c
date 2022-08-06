@@ -438,10 +438,7 @@ end:
 
 int sys_unlinkat(int dirfd, char *pathname, int flags) {
     debugcore("sys_unlinkat");
-    if (flags != 0) {
-        infof("sys_unlinkat: flags=%d not support", flags);
-        return -1;
-    }
+
     struct proc *p = curr_proc();
     char path[MAXPATH];
     copyinstr(p->pagetable, path, (uint64)pathname, MAXPATH);
