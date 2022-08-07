@@ -120,37 +120,62 @@ int test_busybox() {
 //    int n = test_busybox_read_testcases(testcases_buf, testcases);
 
     char *testcases[] = {
-//            "touch test.txt",
-//            "echo \"hello world\" > test.txt",
-//            "cat test.txt",
-//            "cut -c 3 test.txt",
-//            "od test.txt",
-//            "head test.txt",
-//            "tail test.txt",
-//            "hexdump -C test.txt",
-//            "md5sum test.txt",
-//            "echo \"ccccccc\" >> test.txt",
-//            "echo \"bbbbbbb\" >> test.txt",
-//            "echo \"aaaaaaa\" >> test.txt",
-//            "echo \"2222222\" >> test.txt",
-//            "echo \"1111111\" >> test.txt",
-//            "echo \"bbbbbbb\" >> test.txt",
-            "sort test.txt | ./busybox uniq",
-            "stat test.txt",
-            "strings test.txt",
-            "wc test.txt",
-            "[ -f test.txt ]",
-            "more test.txt",
-            "rm test.txt",
-            "mkdir test_dir",
-            "mv test_dir test",
-            "rmdir test",
-            "grep hello busybox_cmd.txt",
-            "cp busybox_cmd.txt busybox_cmd.bak",
-            "rm busybox_cmd.bak",
-            "find -name \"busybox_cmd.txt\"",
+        "echo \"#### independent command test\"",
+        "ash -c exit",
+        "sh -c exit",
+        "basename /aaa/bbb",
+        "cal",
+        "clear",
+        "date",
+        "df",
+        "dirname /aaa/bbb",
+        "dmesg",
+        "du",
+        "expr 1 + 1",
+        "false",
+        "true",
+        "which ls",
+        "uname",
+        "uptime",
+        "printf \"abc\\n\"",
+        "ps",
+        "pwd",
+        "free",
+        "hwclock",
+        "kill 10",
+        "ls",
+        "sleep 1",
+        "echo \"#### file opration test\"",
+        "touch test.txt",
+        "echo \"hello world\" > test.txt",
+        "cat test.txt",
+        "cut -c 3 test.txt",
+        "od test.txt",
+        "head test.txt",
+        "tail test.txt",
+        "hexdump -C test.txt",
+        "md5sum test.txt",
+        "echo \"ccccccc\" >> test.txt",
+        "echo \"bbbbbbb\" >> test.txt",
+        "echo \"aaaaaaa\" >> test.txt",
+        "echo \"2222222\" >> test.txt",
+        "echo \"1111111\" >> test.txt",
+        "echo \"bbbbbbb\" >> test.txt",
+//        "sort test.txt | ./busybox uniq",
+        "stat test.txt",
+        "strings test.txt",
+        "wc test.txt",
+        "[ -f test.txt ]",
+        "more test.txt",
+        "rm test.txt",
+        "mkdir test_dir",
+        "mv test_dir test",
+        "rmdir test",
+        "grep hello busybox_cmd.txt",
+        "cp busybox_cmd.txt busybox_cmd.bak",
+        "rm busybox_cmd.bak",
+        "find -name \"busybox_cmd.txt\"",
     };
-
     int n = sizeof(testcases) / sizeof(char *);
 
     for (int i = 0; i < n; i++) {
@@ -180,11 +205,8 @@ int main() {
         close(fd_dir);
     }
 
-
-    if (open("/dev/console", O_RDWR) < 0) {
-        mknod("/dev/console", 1, 0);
-        open("/dev/console", O_RDWR);
-    }
+    mknod("/dev/console", 1, 0);
+    open("/dev/console", O_RDWR);
 
     dup(0); // stdout
     dup(0); // stderr
@@ -194,6 +216,8 @@ int main() {
     mknod("/dev/proc", 4, 0);
     mknod("/dev/null", 5, 0);
     mknod("/dev/zero", 6, 0);
+
+    mknod("/dev/rtc", 9, 0);
 
 
     // create /proc directory
@@ -209,7 +233,7 @@ int main() {
     link("/busybox", "/ls");
 
 
-//    test_lua();
+    test_lua();
     test_busybox();
 //    run_busybox();
     return 0;
