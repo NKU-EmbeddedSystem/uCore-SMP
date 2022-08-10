@@ -87,7 +87,7 @@ int sys_gettimeofday(struct timeval *tv_va, struct timezone *tz_va);
 
 int sys_nanosleep(struct timeval *req_va, struct timeval *rem_va);
 
-int sys_brk(void* addr);
+uint64 sys_brk(void* addr);
 
 void *sys_mmap(void *start, size_t len, int prot, int flags, int fd, long off);
 

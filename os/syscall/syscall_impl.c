@@ -935,18 +935,19 @@ err_rem:
     return -1;
 }
 
-int sys_brk(void* addr) {
+uint64 sys_brk(void* addr) {
     struct proc *p = curr_proc();
+    uint64 old_pos = p->heap_start + p->heap_sz;
+    uint64 new_pos = (uint64)addr;
+
     if (addr == NULL) {
         // different from Linux
-        return p->heap_start + p->heap_sz;
+        return old_pos;
     }
     if ((uint64)addr < p->heap_start) {
         infof("sys_brk: addr is below heap start");
-        return -1;
+        return old_pos;
     }
-    uint64 old_pos = p->heap_start + p->heap_sz;
-    uint64 new_pos = (uint64)addr;
     if (new_pos > old_pos) {
         // allocate memory
         new_pos = uvmalloc(p->pagetable, old_pos, new_pos);
@@ -957,12 +958,12 @@ int sys_brk(void* addr) {
 
     if (new_pos == 0) {
         infof("sys_brk: uvmalloc/uvmdealloc failed");
-        return -1;
+        return old_pos;
     }
 
     p->heap_sz = new_pos - p->heap_start;
     p->total_size += new_pos - old_pos;
-    return 0;
+    return new_pos;
 }
 
 int sys_writev(int fd, struct iovec *iov_va, int iovcnt) {
