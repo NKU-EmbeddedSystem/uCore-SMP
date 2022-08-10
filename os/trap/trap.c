@@ -54,6 +54,15 @@ void kernel_interrupt_handler(uint64 scause, uint64 stval, uint64 sepc) {
     }
 }
 
+static void print_user_stack(struct proc *p) {
+    uint64 stack_buf[32];
+    copyin(p->pagetable, (char *)stack_buf, p->trapframe->sp, sizeof(stack_buf));
+    printf("user stack:\n");
+    for (int i = 0; i < sizeof(stack_buf) / sizeof(uint64); i++) {
+        printf("%p\n", stack_buf[i]);
+    }
+}
+
 void user_interrupt_handler(uint64 scause, uint64 stval, uint64 sepc) {
     int irq;
     switch (scause & 0xff) {
@@ -120,10 +129,12 @@ void user_exception_handler(uint64 scause, uint64 stval, uint64 sepc) {
         break;
     case LoadPageFault: // 13
         infof("LoadPageFault in user application: %p, stval = %p sepc = %p\n", scause, stval, sepc);
+        print_user_stack(p);
         exit(-2);
         break;
     case StoreAMOPageFault:    //15
         infof("StorePageFault in user application: %p, stval = %p sepc = %p\n", scause, stval, sepc);
+        print_user_stack(p);
         exit(-7);
         break;
     default:
