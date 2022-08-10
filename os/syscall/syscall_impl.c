@@ -844,8 +844,8 @@ int sys_uname(struct utsname *utsname_va) {
     struct proc *p = curr_proc();
     strcpy(utsname.sysname, "uCore-SMP");
     strcpy(utsname.nodename, "uCore-SMP");
-    strcpy(utsname.release, "0.1");
-    strcpy(utsname.version, "0.1");
+    strcpy(utsname.release, "11.0");
+    strcpy(utsname.version, "11.0");
     strcpy(utsname.machine, "riscv64");
     strcpy(utsname.domainname, "Metaverse");
 
