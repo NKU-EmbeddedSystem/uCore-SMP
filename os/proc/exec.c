@@ -110,6 +110,12 @@ load_success:
         envp[i] = (sp_pa - sp_pa_bottom) + sp; // point envp[i] to here, use user space
     }
 
+//    // write 16 random bytes to stack bottom
+    sp_pa -= RANDOM_SIZE;
+    for (int i = 0; i < RANDOM_SIZE; i++) {
+        sp_pa[i] = r_cycle() & 0xff;
+    }
+
     // copy argv and envp pointer array to user stack
     sp_pa -= (argc + envc + 2 + (auxc + 1) * 2) * sizeof(const char *);           // alloc space for argv, envp and auxv, the last ptr is NULL
     const char **argv_start = (const char **)sp_pa; // user main()'s argv value (physical here)

@@ -15,6 +15,7 @@
 #define MAX_PROC_SHARED_MEM_INSTANCE (32)   // every proc
 #define SIGCHLD (17)
 #define MAX_MAPPING (128)
+#define RANDOM_SIZE (16)
 
 // for wait()
 #define WNOHANG		0x00000001

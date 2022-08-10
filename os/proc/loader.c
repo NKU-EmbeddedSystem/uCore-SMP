@@ -52,8 +52,18 @@ struct proghdr {
 #define PT_LOAD    1
 #define PT_DYNAMIC 2
 #define PT_INTERP  3
-#define PT_GNU_STACK      0x6474E551
-#define PT_GNU_RELRO      0x6474E552
+#define PT_NOTE    4
+#define PT_SHLIB   5
+#define PT_PHDR    6
+#define PT_TLS     7               /* Thread local storage segment */
+#define PT_LOOS    0x60000000      /* OS-specific */
+#define PT_HIOS    0x6fffffff      /* OS-specific */
+#define PT_LOPROC  0x70000000
+#define PT_HIPROC  0x7fffffff
+#define PT_GNU_EH_FRAME	(PT_LOOS + 0x474e550)
+#define PT_GNU_STACK	(PT_LOOS + 0x474e551)
+#define PT_GNU_RELRO	(PT_LOOS + 0x474e552)
+#define PT_GNU_PROPERTY	(PT_LOOS + 0x474e553)
 
 // elf file types
 #define ET_EXEC   2
@@ -65,22 +75,32 @@ struct proghdr {
 #define ELF_PROG_FLAG_READ      4
 
 // for auxv
-#define AT_NULL         0               /* End of vector */
-#define AT_IGNORE       1               /* Entry should be ignored */
-#define AT_EXECFD       2               /* File descriptor of program */
-#define AT_PHDR         3               /* Program headers for program */
-#define AT_PHENT        4               /* Size of program header entry */
-#define AT_PHNUM        5               /* Number of program headers */
-#define AT_PAGESZ       6               /* System page size */
-#define AT_BASE         7               /* Base address of interpreter */
-#define AT_FLAGS        8               /* Flags */
-#define AT_ENTRY        9               /* Entry point of program */
-#define AT_NOTELF       10              /* Program is not ELF */
-#define AT_UID          11              /* Real uid */
-#define AT_EUID         12              /* Effective uid */
-#define AT_GID          13              /* Real gid */
-#define AT_EGID         14              /* Effective gid */
-#define AT_CLKTCK       17              /* Frequency of times() */
+#define AT_NULL   0	/* end of vector */
+#define AT_IGNORE 1	/* entry should be ignored */
+#define AT_EXECFD 2	/* file descriptor of program */
+#define AT_PHDR   3	/* program headers for program */
+#define AT_PHENT  4	/* size of program header entry */
+#define AT_PHNUM  5	/* number of program headers */
+#define AT_PAGESZ 6	/* system page size */
+#define AT_BASE   7	/* base address of interpreter */
+#define AT_FLAGS  8	/* flags */
+#define AT_ENTRY  9	/* entry point of program */
+#define AT_NOTELF 10	/* program is not ELF */
+#define AT_UID    11	/* real uid */
+#define AT_EUID   12	/* effective uid */
+#define AT_GID    13	/* real gid */
+#define AT_EGID   14	/* effective gid */
+#define AT_PLATFORM 15  /* string identifying CPU for optimizations */
+#define AT_HWCAP  16    /* arch dependent hints at CPU capabilities */
+#define AT_CLKTCK 17	/* frequency at which times() increments */
+/* AT_* values 18 through 22 are reserved */
+#define AT_SECURE 23   /* secure mode boolean */
+#define AT_BASE_PLATFORM 24	/* string identifying real platform, may
+				 * differ from AT_PLATFORM. */
+#define AT_RANDOM 25	/* address of 16 random bytes */
+#define AT_HWCAP2 26	/* extension of AT_HWCAP */
+
+#define AT_EXECFN  31	/* filename of program */
 /* Pointer to the global system page used for system calls and other nice things.  */
 #define AT_SYSINFO      32
 #define AT_SYSINFO_EHDR 33
@@ -534,8 +554,12 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
     if (has_interp) {
         ADD_AUXV(auxv, AT_BASE, base[1]); // record interpreter base
     }
+    ADD_AUXV(auxv, AT_RANDOM, USER_STACK_BOTTOM - RANDOM_SIZE);
     *auxc = auxv - auxv_base;
     infof("elf_loader auxc %d", *auxc);
+    for (int i = 0; i < *auxc; i++) {
+        infof("elf_loader auxv[%d] %x:%p", i, auxv_base[i].type, auxv_base[i].val);
+    }
 
     uint64 entry = has_interp ? base[1] + ehdr[1].entry : ehdr[0].entry;
     p->trapframe->epc = entry;
