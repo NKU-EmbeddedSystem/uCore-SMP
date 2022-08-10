@@ -126,6 +126,8 @@ char *syscall_names(int id)
         return "SYS_renameat2";
     case SYS_ioctl:
         return "SYS_ioctl";
+    case SYS_getrusage:
+        return "SYS_getrusage";
     default:
         return "?";
     }
@@ -282,6 +284,9 @@ void syscall()
         break;
     case SYS_ioctl:
         ret = sys_ioctl(args[0], args[1], args[2]);
+        break;
+    case SYS_getrusage:
+        ret = sys_getrusage(args[0], (struct rusage *)args[1]);
         break;
     case SYS_getuid:
         ret = sys_id_dummy();

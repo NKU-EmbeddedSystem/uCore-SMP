@@ -45,6 +45,7 @@
 #define SYS_mailread 401
 #define SYS_mailwrite 402
 #define SYS_renameat2 276
+#define SYS_getrusage 165
 
 // dummy syscall
 #define SYS_rt_sigtimedwait 137

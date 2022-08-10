@@ -19,6 +19,8 @@ struct timezone;
 
 struct iovec;
 
+struct rusage;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -108,6 +110,8 @@ int sys_kill(pid_t pid, int sig);
 int sys_renameat2(int olddirfd, char *oldpath, int newdirfd, char *newpath, int flags);
 
 int sys_ioctl(int fd, int request, void *arg);
+
+int sys_getrusage(int who, struct rusage *usage_va);
 
 int sys_dummy_success(void);
 

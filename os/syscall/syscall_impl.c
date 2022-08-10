@@ -1158,6 +1158,35 @@ int sys_ioctl(int fd, int request, void *arg) {
     return fileioctl(f, request, arg);
 }
 
+int sys_getrusage(int who, struct rusage *usage_va) {
+    struct proc *p = curr_proc();
+    if (usage_va == NULL) {
+        infof("sys_getrusage: usage is NULL");
+        return -1;
+    }
+    if (who != RUSAGE_SELF) {
+        infof("sys_getrusage: who is not RUSAGE_SELF");
+        return -1;
+    }
+
+    struct rusage usage;
+    memset(&usage, 0, sizeof(struct rusage));
+
+    uint64 user_time = p->user_time;
+    uint64 sys_time = p->kernel_time;
+
+    usage.ru_utime.tv_sec = user_time / USEC_PER_SEC;
+    usage.ru_utime.tv_usec = user_time % USEC_PER_SEC;
+    usage.ru_stime.tv_sec = sys_time / USEC_PER_SEC;
+    usage.ru_stime.tv_usec = sys_time % USEC_PER_SEC;
+
+    if (copyout(p->pagetable, (uint64)usage_va, &usage, sizeof(struct rusage)) != 0) {
+        infof("sys_getrusage: copyout failed");
+        return -1;
+    }
+    return 0;
+}
+
 int sys_dummy_success() {
     return 0;
 }

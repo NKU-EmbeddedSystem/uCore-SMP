@@ -6,6 +6,7 @@
 #include "exec.h"
 #include <file/file.h>
 #include <lock/lock.h>
+#include <arch/timer.h>
 #define NPROC (256)
 #define KSTACK_SIZE (8192)
 #define USTACK_SIZE (PGSIZE * 25) // must be multiple of PGSIZE
@@ -67,6 +68,12 @@
 #define PROT_EXEC      4
 #define PROT_GROWSDOWN 0x01000000
 #define PROT_GROWSUP   0x02000000
+
+// for rusage
+#define	RUSAGE_SELF	0
+#define	RUSAGE_CHILDREN	(-1)
+#define RUSAGE_BOTH	(-2)		/* sys_wait4() uses this */
+#define	RUSAGE_THREAD	1		/* only the calling thread */
 
 extern char trampoline[];
 extern char boot_stack_top[];
@@ -135,6 +142,26 @@ struct tms {
     long tms_stime;
     long tms_cutime;
     long tms_cstime;
+};
+
+// rusage
+struct rusage {
+    struct timeval ru_utime; // user time used
+    struct timeval ru_stime; // system time used
+    long ru_maxrss;          // maximum resident set size
+    long ru_ixrss;           // integral shared memory size
+    long ru_idrss;           // integral unshared data size
+    long ru_isrss;           // integral unshared stack size
+    long ru_minflt;          // page reclaims
+    long ru_majflt;          // page faults
+    long ru_nswap;           // swaps
+    long ru_inblock;         // block input operations
+    long ru_oublock;         // block output operations
+    long ru_msgsnd;          // messages sent
+    long ru_msgrcv;          // messages received
+    long ru_nsignals;        // signals received
+    long ru_nvcsw;           // voluntary context switches
+    long ru_nivcsw;          // involuntary context switches
 };
 
 struct proc *findproc(int pid);
