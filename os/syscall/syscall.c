@@ -130,6 +130,8 @@ char *syscall_names(int id)
         return "SYS_getrusage";
     case SYS_clock_gettime:
         return "SYS_clock_gettime";
+    case SYS_pselect6:
+        return "SYS_pselect6";
     default:
         return "?";
     }
@@ -292,6 +294,16 @@ void syscall()
         break;
     case SYS_clock_gettime:
         ret = sys_clock_gettime(args[0], (struct timespec *)args[1]);
+        break;
+    case SYS_pselect6:
+        ret = sys_pselect6(
+                args[0],
+                (struct fd_set *) args[1],
+                (struct fd_set *) args[2],
+                (struct fd_set *) args[3],
+                (struct timespec *) args[4],
+                (void *) args[5]
+        );
         break;
     case SYS_getuid:
         ret = sys_id_dummy();

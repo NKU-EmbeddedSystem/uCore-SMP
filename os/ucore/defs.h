@@ -130,6 +130,8 @@ int pipealloc(struct file **f0, struct file **f1);
 void pipeclose(struct pipe *, int);
 int piperead(struct pipe *, uint64, int);
 int pipewrite(struct pipe *, uint64, int);
+bool pipe_readable(struct pipe *pi);
+bool pipe_writeable(struct pipe *pi);
 
 // file.c
 char* fix_cwd_slashes(char *path);

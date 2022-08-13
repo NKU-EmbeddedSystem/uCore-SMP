@@ -106,3 +106,17 @@ int piperead(struct pipe *pi, uint64 addr, int n) {
     release(&pi->lock);
     return i;
 }
+
+bool pipe_readable(struct pipe *pi) {
+    acquire(&pi->lock);
+    bool ret = (pi->nread < pi->nwrite);
+    release(&pi->lock);
+    return ret;
+}
+
+bool pipe_writeable(struct pipe *pi) {
+    acquire(&pi->lock);
+    bool ret = !(pi->nwrite == pi->nread + PIPESIZE);
+    release(&pi->lock);
+    return ret;
+}

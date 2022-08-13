@@ -125,6 +125,7 @@ void user_exception_handler(uint64 scause, uint64 stval, uint64 sepc) {
         break;
     case InstructionPageFault:  // 12
         infof("InstructionPageFault in user application: %p, stval = %p sepc = %p\n", scause, stval, sepc);
+        print_user_stack(p);
         exit(-5);
         break;
     case LoadPageFault: // 13

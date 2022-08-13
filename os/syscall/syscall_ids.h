@@ -47,6 +47,7 @@
 #define SYS_renameat2 276
 #define SYS_getrusage 165
 #define SYS_clock_gettime 113
+#define SYS_pselect6 72
 
 // dummy syscall
 #define SYS_rt_sigtimedwait 137

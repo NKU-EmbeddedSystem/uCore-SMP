@@ -1211,6 +1211,82 @@ int sys_clock_gettime(int clock_id, struct timespec *tp_va) {
     return 0;
 }
 
+int sys_pselect6(
+        int nfds,
+        struct fd_set *readfds_va,
+        struct fd_set *writefds_va,
+        struct fd_set *exceptfds_va,
+        struct timespec *timeout_va,
+        void *sigmask_va
+) {
+    struct proc *p = curr_proc();
+
+    // check nfds
+    if (nfds < 0 || nfds > FD_SETSIZE) {
+        infof("sys_pselect6: nfds is invalid");
+        goto err;
+    }
+
+    // do not support write selection
+    if (writefds_va != NULL) {
+        infof("sys_pselect6: writefds is not NULL");
+        goto err;
+    }
+
+    // check read fds
+    struct fd_set readfds;
+    int ready_cnt = 0;
+    if (copyin(p->pagetable, &readfds, (uint64)readfds_va, sizeof(struct fd_set)) != 0) {
+        infof("sys_pselect6: copyin readfds failed");
+        goto err;
+    }
+//    while(ready_cnt == 0) {
+        for (int i = 0; i < nfds; i++) {
+            if (!FD_ISSET(i, &readfds)) {
+                continue;
+            }
+            struct file *f = get_proc_file_by_fd(p, i);
+            if (f == NULL) {
+                infof("sys_pselect6: fd=%d is not valid", i);
+                continue;
+            }
+            // only support pipe selection
+            if (f->type != FD_PIPE) {
+                infof("sys_pselect6: fd=%d is not pipe", i);
+                continue;
+            }
+            if (!pipe_readable(f->pipe)) {
+                FD_CLR(i, &readfds);
+            } else {
+                ready_cnt++;
+            }
+        }
+//    }
+    if (copyout(p->pagetable, (uint64)readfds_va, &readfds, sizeof(struct fd_set)) != 0) {
+        infof("sys_pselect6: copyout readfds failed");
+    }
+
+clear_fds:
+    // try to clear exceptfds
+    if (exceptfds_va && uvmemset(p->pagetable, (uint64)exceptfds_va, 0, sizeof
+    (struct fd_set)) != 0) {
+        infof("sys_pselect6: exceptfds_va uvmemset failed");
+    }
+
+    return 0;
+
+err:
+    if (readfds_va && uvmemset(p->pagetable, (uint64)readfds_va, 0, sizeof
+            (struct fd_set)) != 0) {
+        infof("sys_pselect6: readfds_va uvmemset failed");
+    }
+    if (writefds_va && uvmemset(p->pagetable, (uint64)writefds_va, 0, sizeof
+            (struct fd_set)) != 0) {
+        infof("sys_pselect6: writefds_va uvmemset failed");
+    }
+    goto clear_fds;
+}
+
 int sys_dummy_success() {
     return 0;
 }

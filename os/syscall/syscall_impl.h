@@ -23,6 +23,8 @@ struct rusage;
 
 struct timespec;
 
+struct fd_set;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -116,6 +118,15 @@ int sys_ioctl(int fd, int request, void *arg);
 int sys_getrusage(int who, struct rusage *usage_va);
 
 int sys_clock_gettime(int clock_id, struct timespec *tp_va);
+
+int sys_pselect6(
+        int nfds,
+        struct fd_set *readfds_va,
+        struct fd_set *writefds_va,
+        struct fd_set *exceptfds_va,
+        struct timespec *timeout_va,
+        void *sigmask_va
+);
 
 int sys_dummy_success(void);
 
