@@ -1187,6 +1187,30 @@ int sys_getrusage(int who, struct rusage *usage_va) {
     return 0;
 }
 
+int sys_clock_gettime(int clock_id, struct timespec *tp_va) {
+    if (clock_id != CLOCK_REALTIME) {
+        infof("sys_clock_gettime: clock_id is not CLOCK_REALTIME");
+        return -1;
+    }
+    if (tp_va == NULL) {
+        infof("sys_clock_gettime: tp is NULL");
+        return -1;
+    }
+    struct proc *p = curr_proc();
+    uint64 time = r_time();
+
+    struct timespec t;
+    t.tv_sec = time / USEC_PER_SEC;
+    t.tv_nsec = (time % USEC_PER_SEC) * 1000;
+
+    if (copyout(p->pagetable, (uint64)tp_va, &t, sizeof(struct timespec)) != 0) {
+        infof("sys_clock_gettime: copyout failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 int sys_dummy_success() {
     return 0;
 }

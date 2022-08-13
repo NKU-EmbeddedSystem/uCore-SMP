@@ -27,6 +27,11 @@ struct timeval {
     uint64 tv_usec;
 };
 
+struct timespec {
+    uint64 tv_sec;
+    uint64 tv_nsec;
+};
+
 struct timezone {
     int tz_minuteswest;
     int tz_dsttime;

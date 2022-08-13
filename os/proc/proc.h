@@ -75,6 +75,12 @@
 #define RUSAGE_BOTH	(-2)		/* sys_wait4() uses this */
 #define	RUSAGE_THREAD	1		/* only the calling thread */
 
+// for clock_gettime
+#define CLOCK_REALTIME			    0
+#define CLOCK_MONOTONIC			    1
+#define CLOCK_PROCESS_CPUTIME_ID	2
+#define CLOCK_THREAD_CPUTIME_ID		3
+
 extern char trampoline[];
 extern char boot_stack_top[];
 extern char boot_stack[];

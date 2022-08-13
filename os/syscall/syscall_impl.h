@@ -21,6 +21,8 @@ struct iovec;
 
 struct rusage;
 
+struct timespec;
+
 int sys_execve( char *pathname_va, char * argv_va[], char * envp_va[]);
 
 int sys_exit(int status);
@@ -112,6 +114,8 @@ int sys_renameat2(int olddirfd, char *oldpath, int newdirfd, char *newpath, int 
 int sys_ioctl(int fd, int request, void *arg);
 
 int sys_getrusage(int who, struct rusage *usage_va);
+
+int sys_clock_gettime(int clock_id, struct timespec *tp_va);
 
 int sys_dummy_success(void);
 

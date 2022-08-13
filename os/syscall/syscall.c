@@ -128,6 +128,8 @@ char *syscall_names(int id)
         return "SYS_ioctl";
     case SYS_getrusage:
         return "SYS_getrusage";
+    case SYS_clock_gettime:
+        return "SYS_clock_gettime";
     default:
         return "?";
     }
@@ -287,6 +289,9 @@ void syscall()
         break;
     case SYS_getrusage:
         ret = sys_getrusage(args[0], (struct rusage *)args[1]);
+        break;
+    case SYS_clock_gettime:
+        ret = sys_clock_gettime(args[0], (struct timespec *)args[1]);
         break;
     case SYS_getuid:
         ret = sys_id_dummy();
