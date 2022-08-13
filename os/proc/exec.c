@@ -143,16 +143,10 @@ load_success:
     *(long*)sp_pa = argc;
 
     p->trapframe->sp += sp_pa - sp_pa_bottom; // update user sp
-//    p->trapframe->sp = (uint64)round_down_8((char*)(p->trapframe->sp)); // round down to multiple of 4
 
-//    p->trapframe->a0 = (uint64)argc;
-//
-//    int64 argv_offset = (uint64)argv_start - (uint64)sp_pa_bottom; // offset of argv in user stack
-//    p->trapframe->a1 = (uint64)(sp + argv_offset);
-
-    // tracecore("trapframe->sp=%p", p->trapframe->sp);
-    // tracecore("trapframe->a0=%p", p->trapframe->a0);
-    // tracecore("trapframe->a1=%p", p->trapframe->a1);
+    // because glibc use this parameter to do exit,
+    // so we need to set it to 0
+    p->trapframe->a0 = 0;
 
     return 0;
 }
