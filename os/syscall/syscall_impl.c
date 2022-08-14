@@ -1192,10 +1192,10 @@ int sys_getrusage(int who, struct rusage *usage_va) {
 }
 
 int sys_clock_gettime(int clock_id, struct timespec *tp_va) {
-    if (clock_id != CLOCK_REALTIME) {
-        infof("sys_clock_gettime: clock_id is not CLOCK_REALTIME");
-        return -1;
-    }
+//    if (clock_id != CLOCK_REALTIME) {
+//        infof("sys_clock_gettime: clock_id is not CLOCK_REALTIME");
+//        return -1;
+//    }
     if (tp_va == NULL) {
         infof("sys_clock_gettime: tp is NULL");
         return -1;
