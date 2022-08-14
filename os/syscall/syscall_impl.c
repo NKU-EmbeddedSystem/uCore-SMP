@@ -1238,15 +1238,17 @@ int sys_pselect6(
     }
 
     // check read fds
+    struct fd_set checkfds;
     struct fd_set readfds;
-    int ready_cnt = 0;
-    if (copyin(p->pagetable, &readfds, (uint64)readfds_va, sizeof(struct fd_set)) != 0) {
+    memset(&readfds, 0, sizeof(struct fd_set));
+    int loop_cnt = 1000;
+    if (copyin(p->pagetable, &checkfds, (uint64)readfds_va, sizeof(struct fd_set)) != 0) {
         infof("sys_pselect6: copyin readfds failed");
         goto err;
     }
-//    while(ready_cnt == 0) {
+//    while(loop_cnt--) {
         for (int i = 0; i < nfds; i++) {
-            if (!FD_ISSET(i, &readfds)) {
+            if (!FD_ISSET(i, &checkfds)) {
                 continue;
             }
             struct file *f = get_proc_file_by_fd(p, i);
@@ -1259,12 +1261,12 @@ int sys_pselect6(
                 infof("sys_pselect6: fd=%d is not pipe", i);
                 continue;
             }
-            if (!pipe_readable(f->pipe)) {
-                FD_CLR(i, &readfds);
-            } else {
-                ready_cnt++;
+            if (pipe_readable(f->pipe)) {
+                FD_SET(i, &readfds);
+                break;
             }
         }
+//        yield();
 //    }
     if (copyout(p->pagetable, (uint64)readfds_va, &readfds, sizeof(struct fd_set)) != 0) {
         infof("sys_pselect6: copyout readfds failed");
