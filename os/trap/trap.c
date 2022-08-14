@@ -117,6 +117,8 @@ void user_exception_handler(uint64 scause, uint64 stval, uint64 sepc) {
         exit(-8);
         break;
     case UserEnvCall:   // 8
+//        if (p->killed)
+//            exit(-1);
         trapframe->epc += 4;
         intr_on();
         syscall();
@@ -170,14 +172,13 @@ void usertrap() {
     p->last_start_time = curr_time;
     release(&p->lock);
 
-    if (p->killed) {
-        infof ("usertrap: proc %d is killed", p->pid);
-        exit(-1);
-    }
     if (scause & (1ULL << 63)) { // interrput = 1
         user_interrupt_handler(scause, stval, sepc);
     } else { // interrput = 0
         user_exception_handler(scause, stval, sepc);
+    }
+    if (p->killed) {
+        exit(-1);
     }
     pushtrace(0x3036);
     usertrapret();
