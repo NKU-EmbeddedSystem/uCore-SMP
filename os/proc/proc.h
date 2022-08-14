@@ -9,9 +9,9 @@
 #include <arch/timer.h>
 #define NPROC (256)
 #define KSTACK_SIZE (8192)
-#define USTACK_SIZE (PGSIZE * 25) // must be multiple of PGSIZE
+#define USTACK_SIZE (PGSIZE * 128) // must be multiple of PGSIZE
 #define TRAPFRAME_SIZE (4096)
-#define FD_MAX (128)
+#define FD_MAX (256)
 #define PROC_NAME_MAX (16)
 #define MAX_PROC_SHARED_MEM_INSTANCE (32)   // every proc
 #define MAX_MAPPING (128)
