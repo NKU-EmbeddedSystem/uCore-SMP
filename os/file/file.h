@@ -5,7 +5,7 @@
 #include <lock/lock.h>
 #include <ucore/types.h>
 // pipe.h
-#define PIPESIZE 512
+#define PIPESIZE 2048
 // in-memory copy of an inode
 #define major(dev) ((dev) >> 16 & 0xFFFF)
 #define minor(dev) ((dev)&0xFFFF)

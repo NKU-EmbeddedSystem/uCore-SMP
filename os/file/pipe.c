@@ -75,22 +75,22 @@ int pipewrite(struct pipe *pi, uint64 addr, int n) {
             sleep(&pi->nwrite, &pi->lock);
             infof("pipewrite at %p: pid = %d woke up", pi, pr->pid);
         } else {
-            char ch;
-            if (copyin(pr->pagetable, &ch, addr + i, 1) == -1)
-                break;
-            pi->data[pi->nwrite++ % PIPESIZE] = ch;
-            i++;
-//            int write_size = MIN(n - i, PIPESIZE - (pi->nwrite - pi->nread));
-//            char write_buf[write_size];
-//            if (copyin(pr->pagetable, write_buf, addr + i, write_size) == -1) {
-//                infof("pipewrite: copyin error");
+//            char ch;
+//            if (copyin(pr->pagetable, &ch, addr + i, 1) == -1)
 //                break;
-//            }
-//            for (int j = 0; j < write_size; j++) {
-//                pi->data[(pi->nwrite + j) % PIPESIZE] = write_buf[j];
-//            }
-//            pi->nwrite += write_size;
-//            i += write_size;
+//            pi->data[pi->nwrite++ % PIPESIZE] = ch;
+//            i++;
+            int write_size = MIN(n - i, PIPESIZE - (pi->nwrite - pi->nread));
+            char write_buf[write_size];
+            if (copyin(pr->pagetable, write_buf, addr + i, write_size) == -1) {
+                infof("pipewrite: copyin error");
+                break;
+            }
+            for (int j = 0; j < write_size; j++) {
+                pi->data[(pi->nwrite + j) % PIPESIZE] = write_buf[j];
+            }
+            pi->nwrite += write_size;
+            i += write_size;
         }
     }
     infof("pipewrite at %p: pid = %d want to write %d bytes, finally write %d "
@@ -117,24 +117,25 @@ int piperead(struct pipe *pi, uint64 addr, int n) {
         sleep(&pi->nread, &pi->lock);
         infof("piperead at  %p: pid = %d woke up from nread", pi, pr->pid);
     }
-    for (i = 0; i < n; i++) {
-        if (pi->nread == pi->nwrite)
-            break;
-        ch = pi->data[pi->nread++ % PIPESIZE];
-        if (copyout(pr->pagetable, addr + i, &ch, 1) == -1)
-            break;
+//    for (i = 0; i < n; i++) {
+//        if (pi->nread == pi->nwrite)
+//            break;
+//        ch = pi->data[pi->nread++ % PIPESIZE];
+//        if (copyout(pr->pagetable, addr + i, &ch, 1) == -1)
+//            break;
+//    }
+    int read_size = MIN(n, pi->nwrite - pi->nread);
+    char read_buf[read_size];
+    for (i = 0; i < read_size; i++) {
+        read_buf[i] = pi->data[pi->nread++ % PIPESIZE];
+    }
+    if (copyout(pr->pagetable, addr, read_buf, read_size) == -1) {
+        infof("piperead: copyout error");
+        i = 0;
     }
     infof("piperead at  %p: pid = %d want to read %d bytes, finally read %d "
           "bytes", pi, pr->pid, n, i);
-//    int read_size = MIN(n, pi->nwrite - pi->nread);
-//    char read_buf[read_size];
-//    for (i = 0; i < read_size; i++) {
-//        read_buf[i] = pi->data[pi->nread++ % PIPESIZE];
-//    }
-//    if (copyout(pr->pagetable, addr, read_buf, read_size) == -1) {
-//        infof("piperead: copyout error");
-//        i = 0;
-//    }
+
     wakeup(&pi->nwrite); 
     release(&pi->lock);
     return i;
