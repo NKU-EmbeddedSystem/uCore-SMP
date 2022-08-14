@@ -778,7 +778,7 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
                     goto free_pages;
                 }
                 memmove(pa, cache->page, PGSIZE);
-            }
+//            }
             pa_arr[i] = pa;
             release_mutex_sleep(&cache->lock);
         }
