@@ -238,11 +238,11 @@ void test_lmbench() {
     for (int i = 0; i < n; i++) {
         argv[3] = testcases[i];
         int ret = test(argv);
-        if (ret == 0) {
-            printf("testcase lmbench %s success\n", testcases[i]);
-        } else {
-            printf("testcase lmbench %s fail\n", testcases[i]);
-        }
+//        if (ret == 0) {
+//            printf("testcase lmbench %s success\n", testcases[i]);
+//        } else {
+//            printf("testcase lmbench %s fail\n", testcases[i]);
+//        }
     }
 }
 
