@@ -31,7 +31,6 @@ struct kstat {
     long st_mtime_nsec;
     long st_ctime_sec;
     long st_ctime_nsec;
-    unsigned __unused[2];
 };
 
 enum
