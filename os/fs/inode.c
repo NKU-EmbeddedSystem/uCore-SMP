@@ -633,6 +633,7 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
 
     uint off_align;
     uint64 data_align;
+    uint64 n_dup = n;
     uint64 len = n;
     while (len > 0) {
         off_align = PGROUNDDOWN(off);
@@ -654,7 +655,7 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
         off = off_align + PGSIZE;
         release_mutex_sleep(&cache->lock);
     }
-    return n;
+    return n_dup;
 }
 
 // Write data to inode.
@@ -706,11 +707,13 @@ int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
 
     uint off_align;
     uint64 data_align;
+    uint64 n_dup = n;
     uint64 len = n;
     while (len > 0) {
         off_align = PGROUNDDOWN(off);
         struct page_cache *cache = ctable_acquire(ip, off_align);
         if (cache == NULL) {
+            infof("writei: acquire page_cache failed");
             return 0;
         }
         data_align = (uint64)cache->page;
@@ -720,6 +723,7 @@ int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
         }
         if (either_copyin((char *)data_align + (off - off_align), (char *)src, n, user_src) == -1) {
             release_mutex_sleep(&cache->lock);
+            infof("writei: copyin failed");
             return 0;
         }
         len -= n;
@@ -728,7 +732,8 @@ int writei(struct inode *ip, int user_src, void *src, uint off, uint n) {
         cache->dirty = TRUE;
         release_mutex_sleep(&cache->lock);
     }
-    return n;
+    infof("writei: write %d bytes to disk", n_dup);
+    return n_dup;
 //    // seek to the right position
 //    if (f_lseek(&ip->file, off) != FR_OK) {
 //        return 0;
