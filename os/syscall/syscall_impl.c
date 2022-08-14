@@ -1246,7 +1246,7 @@ int sys_pselect6(
         infof("sys_pselect6: copyin readfds failed");
         goto err;
     }
-//    while(loop_cnt--) {
+    while(loop_cnt--) {
         for (int i = 0; i < nfds; i++) {
             if (!FD_ISSET(i, &checkfds)) {
                 continue;
@@ -1266,8 +1266,8 @@ int sys_pselect6(
                 break;
             }
         }
-//        yield();
-//    }
+        yield();
+    }
     if (copyout(p->pagetable, (uint64)readfds_va, &readfds, sizeof(struct fd_set)) != 0) {
         infof("sys_pselect6: copyout readfds failed");
     }
