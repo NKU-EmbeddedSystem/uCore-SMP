@@ -9,19 +9,24 @@ int kill(int pid) {
     struct proc *p;
     acquire(&pool_lock);
     for (p = pool; p < &pool[NPROC]; p++) {
-        if (p->state == UNUSED && p->pid == pid) {
+        if (p->state != UNUSED && p->state != ZOMBIE && p->pid == pid) {
             acquire(&p->lock);
             release(&pool_lock);
             goto found;
         }
     }
     release(&pool_lock);
+    infof ("kill: no such pid %d", pid);
 //    return -3; // -ESRCH, means no such process
     return 0; // we think it is success
 
 found:
+    infof("kill: pid %d found", pid);
     // kill the process
     p->killed = 1;
+    if (p->state == SLEEPING) {
+        p->state = RUNNABLE;
+    }
     release(&p->lock);
     return 0;
 }

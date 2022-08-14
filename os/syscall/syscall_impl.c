@@ -1098,6 +1098,10 @@ int sys_faccessat(int dirfd, char *pathname, int mode, int flags) {
 }
 
 int sys_kill(pid_t pid, int sig) {
+    if (sig != SIGKILL) {
+        infof("sys_kill: sig is not SIGKILL");
+        return 0;
+    }
     return kill(pid);
 }
 
