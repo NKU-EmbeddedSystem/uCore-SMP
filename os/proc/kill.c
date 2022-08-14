@@ -9,11 +9,12 @@ int kill(int pid) {
     struct proc *p;
     acquire(&pool_lock);
     for (p = pool; p < &pool[NPROC]; p++) {
+        acquire(&p->lock);
         if (p->state != UNUSED && p->state != ZOMBIE && p->pid == pid) {
-            acquire(&p->lock);
             release(&pool_lock);
             goto found;
         }
+        release(&p->lock);
     }
     release(&pool_lock);
     infof ("kill: no such pid %d", pid);
