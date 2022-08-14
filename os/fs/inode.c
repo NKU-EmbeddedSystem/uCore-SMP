@@ -532,14 +532,14 @@ void iput(struct inode *ip) {
             infof("iput: deleting file %s\n", ip->path);
             FRESULT result = f_unlink(ip->path);
             if (result != FR_OK) {
-                printf("iput: f_unlink failed, result = %d\n", result);
-                panic("iput: f_unlink failed");
+                infof("iput: f_unlink failed, result = %d\n", result);
+//                panic("iput: f_unlink failed");
             }
         } else if (strlen(ip->new_path) != 0) {
             infof("iput: renaming file %s to %s\n", ip->path, ip->new_path);
             FRESULT result = f_rename(ip->path, ip->new_path);
             if (result != FR_OK) {
-                printf("iput: f_rename failed, result = %d\n", result);
+                infof("iput: f_rename failed, result = %d\n", result);
                 panic("iput: f_rename failed");
             }
         }
