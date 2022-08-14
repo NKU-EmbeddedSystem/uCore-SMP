@@ -62,5 +62,6 @@
 #define SYS_utimensat 88
 #define SYS_syslog 116
 #define SYS_faccessat 48
+#define SYS_msync 227
 
 #endif // SYSCALL_IDS_H

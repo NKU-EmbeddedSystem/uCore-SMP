@@ -132,6 +132,8 @@ char *syscall_names(int id)
         return "SYS_clock_gettime";
     case SYS_pselect6:
         return "SYS_pselect6";
+    case SYS_msync:
+        return "SYS_msync";
     default:
         return "?";
     }
@@ -321,6 +323,9 @@ void syscall()
         ret = sys_dummy_success();
         break;
     case SYS_syslog:
+        ret = sys_dummy_success();
+        break;
+    case SYS_msync:
         ret = sys_dummy_success();
         break;
     default:
