@@ -70,14 +70,13 @@ void exit(int code)
         if (child != p) // avoid deadlock
         {
             // print_proc(child);
+            acquire(&child->lock);
             if (child->state != UNUSED && child->parent == p)
             {
                 // found a child
-                acquire(&child->lock);
                 reparent(child);
-                release(&child->lock);
-
             }
+            release(&child->lock);
         }
     }
     release(&wait_lock);
