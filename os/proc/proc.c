@@ -768,10 +768,10 @@ void *mmap(struct proc *p, void *start, size_t len, int prot, int flags, struct 
                 infof("sys_mmap: file is too small");
                 goto free_pages;
             }
-            if (flags & MAP_SHARED) {
-                pa = cache->page;
-                dup_physical_page(cache->page);
-            } else {
+//            if (flags & MAP_SHARED) {
+//                pa = cache->page;
+//                dup_physical_page(cache->page);
+//            } else {
                 pa = alloc_physical_page();
                 if (pa == NULL) {
                     infof("sys_mmap: no free physical page");
