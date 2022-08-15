@@ -1246,7 +1246,7 @@ int igetdents(struct inode* dp, char *buf, unsigned long len) {
         namelen = strlen(fno.fname);
         if ((uint64)curr + sizeof(struct linux_dirent64) + namelen + 1 > (uint64)buf + len) {
             infof("igetdents: buffer overflow");
-            return -1;
+            return (uint64)curr - (uint64)buf;
         }
         // fat32 not depends on ino
         curr->d_ino = 0;
