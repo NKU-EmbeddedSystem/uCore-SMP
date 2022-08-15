@@ -414,7 +414,7 @@ int filestat(struct file *f, uint64 addr) {
 int fileioctl(struct file *f, int cmd, void *arg) {
     if (f->type != FD_DEVICE) {
         infof("fileioctl: not a device");
-        return -1;
+        return 0;
     }
 
     if (f->major < 0 || f->major >= NDEV || !device_handler[f->major].ioctl)
