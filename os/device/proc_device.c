@@ -36,9 +36,9 @@ int64 proc_read(char *dst, int64 len, int to_user)
     {
         if ((cnt + 1) * sizeof(struct proc_stat) > len)
             break;
+        acquire(&p->lock);
         if (p->state != UNUSED)
         {
-            acquire(&p->lock);
             strncpy(stat_buf[cnt].name, p->name, PROC_NAME_MAX);
             stat_buf[cnt].pid = p->pid;
             if (p->parent)
@@ -53,10 +53,9 @@ int64 proc_read(char *dst, int64 len, int to_user)
             stat_buf[cnt].total_size = p->total_size;
             stat_buf[cnt].cpu_time = p->kernel_time + p->user_time;
             stat_buf[cnt].state = p->state;
-
-            release(&p->lock);
             cnt++;
         }
+        release(&p->lock);
     }
     printf("cnt %d\n",cnt);
     release(&pool_lock);

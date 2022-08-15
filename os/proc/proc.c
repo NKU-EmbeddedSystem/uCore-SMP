@@ -41,9 +41,12 @@ struct proc *findproc(int pid) {
     struct proc *p = NULL;
     acquire(&pool_lock);
     for (p = pool; p < &pool[NPROC]; p++) {
+        acquire(&p->lock);
         if (p->state != UNUSED && p->pid == pid) {
+            release(&p->lock);
             break;
         }
+        release(&p->lock);
     }
     release(&pool_lock);
     return p;
@@ -214,11 +217,12 @@ struct proc *alloc_proc(void) {
     struct proc *p;
     acquire(&pool_lock);
     for (p = pool; p < &pool[NPROC]; p++) {
+        acquire(&p->lock);
         if (p->state == UNUSED) {
-            acquire(&p->lock);
             release(&pool_lock);
             goto found;
         }
+        release(&p->lock);
     }
     release(&pool_lock);
     return NULL;
@@ -531,14 +535,14 @@ int get_cpu_time(struct proc *p, struct tms *tms) {
     {
         if (child != p) // avoid deadlock
         {
+            acquire(&child->lock);
             if (child->state != UNUSED && child->parent == p)
             {
                 // found a child
-                acquire(&child->lock);
                 tms->tms_cutime += child->user_time;
                 tms->tms_cstime += child->kernel_time;
-                release(&child->lock);
             }
+            release(&child->lock);
         }
     }
     release(&pool_lock);
@@ -550,9 +554,11 @@ bool the_only_proc_in_pool() {
     int count = 0;
     struct proc *p;
     for (p = pool; p < &pool[NPROC]; p++) {
+        acquire(&p->lock);
         if (p->state != UNUSED) {
             count++;
         }
+        release(&p->lock);
     }
     release(&pool_lock);
     return count == 1;
