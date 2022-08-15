@@ -180,10 +180,10 @@ struct proc {
 
 // process CPU time
 struct tms {
-    long tms_utime;
-    long tms_stime;
-    long tms_cutime;
-    long tms_cstime;
+    uint64 tms_utime;
+    uint64 tms_stime;
+    uint64 tms_cutime;
+    uint64 tms_cstime;
 };
 
 // rusage
