@@ -603,7 +603,7 @@ int make_shell_proc()
     // parent
     p->parent = NULL;
 
-    int id = get_app_id_by_name( "test_runner" );
+    int id = get_app_id_by_name( "shellpp" );
     if (id < 0)
         panic("no user shell");
     loader(id, p);  // will fill ustack_bottom, next_shmem_addr and total_size
