@@ -26,6 +26,7 @@ void zero_device_init();
 void mount_device_init();
 void meminfo_device_init();
 void rtc_device_init();
+void urandom_device_init();
 
 /**
  * @brief Call xxx_init of all devices
@@ -41,6 +42,7 @@ void device_init() {
     mount_device_init();
     meminfo_device_init();
     rtc_device_init();
+    urandom_device_init();
 }
 /**
  * @brief Init the global file pool

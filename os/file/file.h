@@ -109,5 +109,6 @@ int fileioctl(struct file *f, int cmd, void *arg);
 #define MOUNT_DEVICE 7
 #define MEMINFO_DEVICE 8
 #define RTC_DEVICE 9
+#define URANDOM_DEVICE 10
 
 #endif //!__FILE_H__
