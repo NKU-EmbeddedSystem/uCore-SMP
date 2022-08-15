@@ -325,7 +325,9 @@ static void print_proghdr(struct proghdr *ph)
     printf("\n");
 }
 
-int loadelf(struct proc *p, struct inode *ip, struct elfhdr *ehdr, uint64 *base, uint *npages) {
+int loadelf(struct proc *p, struct inode *ip, bool is_interp, struct elfhdr
+        *ehdr,
+        uint64 *base, uint *npages) {
 
     // Check ELF header
     if (readi(ip, FALSE, ehdr, 0, sizeof(struct elfhdr)) != sizeof(struct elfhdr)) {
@@ -356,12 +358,22 @@ int loadelf(struct proc *p, struct inode *ip, struct elfhdr *ehdr, uint64 *base,
 
     // allocate memory
     uint64 map_base = 0;
-    if (!is_dyn) {
-        if (uvmalloc(p->pagetable, USER_TEXT_START, max_va) != max_va) {
-            infof("elf_loader uvmalloc failed");
-            return -1;
+    if (!is_interp) {
+        if (is_dyn) {
+            map_base = USER_TEXT_START;
+            if (uvmalloc(p->pagetable, USER_TEXT_START, USER_TEXT_START +
+            max_va) != USER_TEXT_START + max_va) {
+                infof("elf_loader uvmalloc failed");
+                return -1;
+            }
+        } else {
+            map_base = min_va;
+            if (uvmalloc(p->pagetable, USER_TEXT_START, max_va) != max_va) {
+                infof("elf_loader uvmalloc failed");
+                return -1;
+            }
         }
-        map_base = min_va;
+
     } else {
         map_base = (uint64)mmap(p, NULL, max_va - min_va, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, NULL, 0);
         if ((void *)map_base == MAP_FAILED) {
@@ -522,7 +534,7 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
     uint npages[2];
 
     // load exec
-    if (loadelf(p, ip, &ehdr[0], &base[0], &npages[0]) < 0) {
+    if (loadelf(p, ip, FALSE, &ehdr[0], &base[0], &npages[0]) < 0) {
         panic("elf_loader loadelf exec failed");
     }
 
@@ -536,7 +548,7 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
             panic("elf_loader inode_by_name dyn failed");
         }
         ilock(interp_ip);
-        if (loadelf(p, interp_ip, &ehdr[1], &base[1], &npages[1]) < 0) {
+        if (loadelf(p, interp_ip, TRUE, &ehdr[1], &base[1], &npages[1]) < 0) {
             panic("elf_loader loadelf dyn failed");
         }
         iunlockput(interp_ip);
@@ -544,13 +556,15 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
 
     iunlockput(ip);
 
+    uint64 bin_entry =ehdr[0].type == ET_EXEC ? ehdr[0].entry : base[0] + ehdr[0].entry;
+
     // fill auxv info
     struct auxv_t *auxv_base = auxv;
     ADD_AUXV(auxv, AT_PHDR, base[0] + ehdr[0].phoff);
     ADD_AUXV(auxv, AT_PHENT, sizeof(struct proghdr));
     ADD_AUXV(auxv, AT_PHNUM, ehdr[0].phnum);
     ADD_AUXV(auxv, AT_PAGESZ, PGSIZE);
-    ADD_AUXV(auxv, AT_ENTRY, ehdr[0].entry);
+    ADD_AUXV(auxv, AT_ENTRY, bin_entry);
     if (has_interp) {
         ADD_AUXV(auxv, AT_BASE, base[1]); // record interpreter base
     }
@@ -560,8 +574,7 @@ int elf_loader(char* name, struct proc *p, struct auxv_t *auxv, int *auxc) {
     for (int i = 0; i < *auxc; i++) {
         infof("elf_loader auxv[%d] %x:%p", i, auxv_base[i].type, auxv_base[i].val);
     }
-
-    uint64 entry = has_interp ? base[1] + ehdr[1].entry : ehdr[0].entry;
+    uint64 entry = has_interp ? base[1] + ehdr[1].entry : bin_entry;
     p->trapframe->epc = entry;
     infof("elf_loader epc %p", entry);
     alloc_ustack(p);
@@ -590,7 +603,7 @@ int make_shell_proc()
     // parent
     p->parent = NULL;
 
-    int id = get_app_id_by_name( "test_runner" );
+    int id = get_app_id_by_name( "shellpp" );
     if (id < 0)
         panic("no user shell");
     loader(id, p);  // will fill ustack_bottom, next_shmem_addr and total_size
