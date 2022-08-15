@@ -11,11 +11,13 @@ int clone(void* stack) {
     struct proc *np;
     struct proc *p = curr_proc();
 
+    infof("clone: stage0");
     // Allocate process.
     if ((np = alloc_proc()) == NULL) {
         return -1;
     }
 
+    infof("clone: stage1");
     // Copy user memory from parent to child.
     if (uvmcopy(p->pagetable, np->pagetable, p->total_size) < 0) {
         freeproc(np);
@@ -37,20 +39,24 @@ int clone(void* stack) {
         np->trapframe->sp = (uint64)stack;
     }
 
+    infof("clone: stage2");
     // increment reference counts on open file descriptors.
     for (i = 0; i < FD_MAX; i++)
         if (p->files[i])
             np->files[i] = filedup(p->files[i]);
+    infof("clone: stage3");
     np->cwd = idup(p->cwd);
 
+    infof("clone: stage4");
     // dup shared mem
     for (int i = 0; i < MAX_PROC_SHARED_MEM_INSTANCE; i++)
     {
-        
+
         np->shmem[i] = (p->shmem[i] == NULL)? NULL: dup_shared_mem(p->shmem[i]);
         np->shmem_map_start[i] = p->shmem_map_start[i] ;
     }
 
+    infof("clone: stage5");
     // dup mapping
     for (int i = 0; i < MAX_MAPPING; i++)
     {
@@ -62,7 +68,7 @@ int clone(void* stack) {
         np->maps[i].npages = p->maps[i].npages;
         np->maps[i].shared = p->maps[i].shared;
     }
-    
+
     np->next_shmem_addr = p->next_shmem_addr;
 
     safestrcpy(np->name, p->name, sizeof(p->name));
@@ -71,13 +77,16 @@ int clone(void* stack) {
 
     release(&np->lock);
 
+    infof("clone: stage6");
     acquire(&wait_lock);
     np->parent = p;
     release(&wait_lock);
 
+    infof("clone: stage7");
     acquire(&np->lock);
     np->state = RUNNABLE;
     release(&np->lock);
 
+    infof("clone: stage8");
     return pid;
 }
