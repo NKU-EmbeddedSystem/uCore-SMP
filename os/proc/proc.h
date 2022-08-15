@@ -8,7 +8,7 @@
 #include <lock/lock.h>
 #include <arch/timer.h>
 #define NPROC (256)
-#define KSTACK_SIZE (PGSIZE * 4)
+#define KSTACK_SIZE (PGSIZE * 16)
 #define USTACK_SIZE (PGSIZE * 128) // must be multiple of PGSIZE
 #define TRAPFRAME_SIZE (4096)
 #define FD_MAX (256)
